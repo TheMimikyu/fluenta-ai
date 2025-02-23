@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Select,
@@ -12,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, ArrowLeft, Play } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
-import { fal } from "@fal-ai/client";
+import { fal } from "@/config/fal";
 import { useToast } from "@/components/ui/use-toast";
 
 const Practice = () => {
