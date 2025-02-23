@@ -55,12 +55,12 @@ const Practice = () => {
         throw new Error('No access token available');
       }
 
-      console.log("Starting function invocation with scenario:", scenario);
+      console.log("Starting function invocation with payload:", { scenario });
       
       const { data: functionData, error: functionError } = await supabase.functions.invoke(
         'generate-image',
         {
-          body: { scenario },
+          body: JSON.stringify({ scenario }),
           headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ const Practice = () => {
       console.error("Error generating image:", error);
       toast({
         title: "Error",
-        description: "Failed to generate image. Please try again.",
+        description: error.message || "Failed to generate image. Please try again.",
         variant: "destructive",
       });
     } finally {

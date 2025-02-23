@@ -8,11 +8,9 @@ const FAL_API_URL = "https://queue.fal.run/fal-ai/flux-lora";
 console.log("Edge function starting...");
 
 serve(async (req) => {
-  console.log("Received request:", {
-    method: req.method,
-    url: req.url,
-    headers: Object.fromEntries(req.headers.entries()),
-  });
+  // Log request details
+  console.log("Request method:", req.method);
+  console.log("Request headers:", Object.fromEntries(req.headers.entries()));
 
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -21,221 +19,168 @@ serve(async (req) => {
   }
 
   try {
-    // Validate request body
+    // Clone the request body for logging
+    const reqBody = await req.text();
+    console.log("Raw request body:", reqBody);
+
+    // Parse the JSON body
     let body;
     try {
-      body = await req.json();
+      body = JSON.parse(reqBody);
     } catch (parseError) {
-      console.error("Error parsing request body:", parseError);
+      console.error("JSON parse error:", parseError);
       return new Response(
-        JSON.stringify({ 
-          error: "Invalid request body",
-          details: "Request body must be valid JSON"
+        JSON.stringify({
+          error: "Invalid JSON",
+          details: parseError.message
         }),
-        { 
+        {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         }
       );
     }
 
-    console.log("Parsed request body:", body);
+    console.log("Parsed body:", body);
 
+    // Validate scenario
     const { scenario } = body;
-
     if (!scenario) {
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: "Missing scenario",
           details: "Scenario is required in the request body"
         }),
-        { 
+        {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         }
       );
     }
 
+    // Validate FAL API key
     if (!FAL_KEY) {
-      console.error("FAL_KEY not found in environment variables");
+      console.error("FAL_KEY not found");
       return new Response(
-        JSON.stringify({ error: "API key not configured" }),
-        { 
+        JSON.stringify({
+          error: "Configuration error",
+          details: "FAL API key not configured"
+        }),
+        {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         }
       );
     }
 
-    console.log("Starting image generation for scenario:", scenario);
-    
-    // Initial request to start image generation
-    try {
-      const response = await fetch(FAL_API_URL, {
-        method: "POST",
+    // Make request to FAL API
+    console.log("Making request to FAL API with scenario:", scenario);
+    const falResponse = await fetch(FAL_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Key ${FAL_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: `Realistic scene of ${scenario}, photographic style, detailed environment, natural lighting`,
+      }),
+    });
+
+    if (!falResponse.ok) {
+      const errorText = await falResponse.text();
+      console.error("FAL API error:", errorText);
+      return new Response(
+        JSON.stringify({
+          error: "FAL API error",
+          details: `${falResponse.status}: ${falResponse.statusText}`
+        }),
+        {
+          status: falResponse.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+
+    const falData = await falResponse.json();
+    console.log("FAL API response:", falData);
+
+    if (!falData.request_id) {
+      return new Response(
+        JSON.stringify({
+          error: "Invalid FAL response",
+          details: "No request ID received"
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+
+    // Poll for results
+    let imageUrl = null;
+    let attempts = 0;
+    const maxAttempts = 30;
+
+    while (attempts < maxAttempts && !imageUrl) {
+      console.log(`Polling attempt ${attempts + 1}`);
+      const pollResponse = await fetch(`${FAL_API_URL}/${falData.request_id}`, {
         headers: {
           "Authorization": `Key ${FAL_KEY}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          prompt: `Realistic scene of ${scenario}, photographic style, detailed environment, natural lighting`,
-        }),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("FAL API error response:", errorText);
-        return new Response(
-          JSON.stringify({ 
-            error: "FAL API error",
-            details: `${response.status}: ${response.statusText}`
-          }),
-          { 
-            status: response.status,
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-          }
-        );
+      if (!pollResponse.ok) {
+        const errorText = await pollResponse.text();
+        console.error("Polling error:", errorText);
+        continue;
       }
 
-      let result;
-      try {
-        result = await response.json();
-      } catch (parseError) {
-        console.error("Error parsing FAL API response:", parseError);
-        return new Response(
-          JSON.stringify({ 
-            error: "Invalid FAL API response",
-            details: "Could not parse response from FAL API"
-          }),
-          { 
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-          }
-        );
+      const pollData = await pollResponse.json();
+      console.log("Poll response:", pollData);
+
+      if (pollData.status === "completed" && pollData.image?.url) {
+        imageUrl = pollData.image.url;
+        break;
       }
 
-      console.log("Initial FAL API response:", result);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      attempts++;
+    }
 
-      if (!result.request_id) {
-        return new Response(
-          JSON.stringify({ 
-            error: "Invalid response",
-            details: "No request ID received from FAL AI"
-          }),
-          { 
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-          }
-        );
-      }
-
-      // Poll for the result using the request ID
-      const pollUrl = `${FAL_API_URL}/${result.request_id}`;
-      let imageUrl = null;
-      let attempts = 0;
-      const maxAttempts = 30;
-
-      while (attempts < maxAttempts && !imageUrl) {
-        console.log(`Polling attempt ${attempts + 1} for request ID: ${result.request_id}`);
-        
-        const pollResponse = await fetch(pollUrl, {
-          method: "GET",
-          headers: {
-            "Authorization": `Key ${FAL_KEY}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!pollResponse.ok) {
-          const errorText = await pollResponse.text();
-          console.error("Poll error response:", errorText);
-          return new Response(
-            JSON.stringify({ 
-              error: "Polling error",
-              details: `${pollResponse.status}: ${pollResponse.statusText}`
-            }),
-            { 
-              status: pollResponse.status,
-              headers: { ...corsHeaders, "Content-Type": "application/json" }
-            }
-          );
-        }
-
-        let pollResult;
-        try {
-          pollResult = await pollResponse.json();
-        } catch (parseError) {
-          console.error("Error parsing poll response:", parseError);
-          return new Response(
-            JSON.stringify({ 
-              error: "Invalid polling response",
-              details: "Could not parse polling response"
-            }),
-            { 
-              status: 500,
-              headers: { ...corsHeaders, "Content-Type": "application/json" }
-            }
-          );
-        }
-
-        console.log("Poll result:", pollResult);
-
-        if (pollResult.status === "completed" && pollResult.image?.url) {
-          imageUrl = pollResult.image.url;
-          console.log("Successfully received image URL:", imageUrl);
-          break;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        attempts++;
-      }
-
-      if (!imageUrl) {
-        return new Response(
-          JSON.stringify({ 
-            error: "Timeout",
-            details: "Image generation timed out or failed"
-          }),
-          { 
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-          }
-        );
-      }
-
+    if (!imageUrl) {
       return new Response(
-        JSON.stringify({ 
-          imageUrl,
-          success: true 
+        JSON.stringify({
+          error: "Generation timeout",
+          details: "Image generation timed out"
         }),
-        { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200 
-        }
-      );
-    } catch (fetchError) {
-      console.error("Fetch error details:", fetchError);
-      return new Response(
-        JSON.stringify({ 
-          error: "Network error",
-          details: fetchError.message
-        }),
-        { 
+        {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         }
       );
     }
-  } catch (error) {
-    console.error("Error generating image:", error);
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
+        imageUrl,
+        success: true
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      }
+    );
+
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    return new Response(
+      JSON.stringify({
         error: "Server error",
         details: error.message
       }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500 
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       }
     );
   }
