@@ -116,15 +116,8 @@ export const useConversationAI = () => {
             setIsSpeaking(false);
           }
         },
-        turnDetection: {
-          type: 'server_vad',
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 1000
-        },
         inputAudioFormat: 'pcm_16000',
-        outputAudioFormat: 'pcm_16000',
-        instructions: `You are a ${language} language tutor helping a ${nativeLanguage} speaker practice ${language} in a scenario about ${scenario}. The student's level is ${difficulty}. Speak in ${language} but give instructions in ${nativeLanguage}.`
+        outputAudioFormat: 'pcm_16000'
       });
 
       setConversation(conv);
