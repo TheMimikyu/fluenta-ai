@@ -19,8 +19,8 @@ export const useConversationAI = () => {
       });
 
       if (error) throw error;
-      if (!data?.conversation_id) {
-        throw new Error('No conversation ID received');
+      if (!data?.conversation_url) {
+        throw new Error('No conversation URL received');
       }
 
       // Initialize conversation
@@ -31,7 +31,7 @@ export const useConversationAI = () => {
 
       setStatus('connected');
       
-      return data.conversation_id;
+      return data.conversation_url;
     } catch (error) {
       console.error('Error starting conversation:', error);
       toast({

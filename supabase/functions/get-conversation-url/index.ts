@@ -22,28 +22,12 @@ serve(async (req) => {
       'Content-Type': 'application/json',
     });
 
-    // Get the signed URL from ElevenLabs
+    // Get the signed URL from ElevenLabs using the correct endpoint
     const response = await fetch(
-      "https://api.elevenlabs.io/v1/conversation/start",
+      "https://api.elevenlabs.io/v1/convai/conversation/get_signed_url",
       {
-        method: "POST",
+        method: "GET",
         headers,
-        body: JSON.stringify({
-          model: "eleven_turbo_v2",
-          name: "Language Practice Assistant",
-          description: "A language tutor that helps users practice conversations",
-          variables: {
-            scenario,
-            language
-          },
-          system_prompt: `You are a helpful language tutor. The student wants to practice ${language} in the following scenario: ${scenario}. 
-          Engage in a natural conversation, providing corrections and feedback when needed. Keep responses concise and focused on helping them improve their language skills.`,
-          initial_message: `Hello! I'm your ${language} conversation partner for today. We'll practice a conversation about ${scenario}. Would you like to start?`,
-          input_audio_config: {
-            voice_id: "CwhRBWXzGAHq8TQ4Fs17", // Roger voice
-            model_id: "eleven_multilingual_v2",
-          },
-        }),
       }
     );
 
@@ -51,11 +35,11 @@ serve(async (req) => {
       throw new Error(`ElevenLabs API error: ${await response.text()}`);
     }
 
-    const data = await response.json();
-    console.log('Successfully received conversation URL:', data);
+    const { signed_url } = await response.json();
+    console.log('Successfully received conversation URL:', signed_url);
 
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify({ conversation_url: signed_url }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
