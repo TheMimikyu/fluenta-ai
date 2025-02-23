@@ -84,10 +84,6 @@ const Practice = () => {
     }
   };
 
-  const handleStartConversation = () => {
-    console.log("Starting conversation...");
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <PracticeNav onSignOut={handleSignOut} />
@@ -99,6 +95,8 @@ const Practice = () => {
           onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
           scenario={scenario}
           targetLanguage={targetLanguage}
+          difficulty={difficulty}
+          nativeLanguage={nativeLanguage}
         />
       ) : (
         <div className="container mx-auto p-6">
@@ -122,6 +120,8 @@ const Practice = () => {
               onToggleFullScreen={() => setIsFullScreen(true)}
               scenario={scenario}
               targetLanguage={targetLanguage}
+              difficulty={difficulty}
+              nativeLanguage={nativeLanguage}
             />
           )}
         </div>

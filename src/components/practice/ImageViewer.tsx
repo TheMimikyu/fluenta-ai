@@ -9,6 +9,8 @@ interface ImageViewerProps {
   onToggleFullScreen: () => void;
   scenario: string;
   targetLanguage: string;
+  difficulty: string;
+  nativeLanguage: string;
 }
 
 export const ImageViewer = ({
@@ -17,12 +19,14 @@ export const ImageViewer = ({
   onToggleFullScreen,
   scenario,
   targetLanguage,
+  difficulty,
+  nativeLanguage,
 }: ImageViewerProps) => {
   const { status, startConversation, endConversation } = useConversationAI();
 
   const handleStartConversation = async () => {
     try {
-      await startConversation(scenario, targetLanguage);
+      await startConversation(scenario, targetLanguage, difficulty, nativeLanguage);
     } catch (error) {
       console.error('Failed to start conversation:', error);
     }
