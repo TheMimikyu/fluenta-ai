@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, User } from "lucide-react";
@@ -19,6 +18,27 @@ const Index = () => {
             </div>
             {user ? (
               <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/practice")}
+                >
+                  Practice
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/quiz")}
+                >
+                  Quiz
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/tracking")}
+                >
+                  Progress
+                </Button>
                 <span className="text-sm text-gray-600">{user.email}</span>
                 <Button
                   variant="ghost"
