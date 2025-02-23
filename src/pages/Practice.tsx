@@ -14,7 +14,8 @@ import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
 
 const Practice = () => {
-  const [language, setLanguage] = useState("");
+  const [targetLanguage, setTargetLanguage] = useState("");
+  const [nativeLanguage, setNativeLanguage] = useState("");
   const [scenario, setScenario] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -86,14 +87,32 @@ const Practice = () => {
               Language Practice
             </h1>
 
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Language
+                  Native Language
                 </label>
-                <Select onValueChange={setLanguage}>
+                <Select onValueChange={setNativeLanguage}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select language" />
+                    <SelectValue placeholder="Select your native language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hi">Hindi</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="fr">French</SelectItem>
+                    <SelectItem value="de">German</SelectItem>
+                    <SelectItem value="es">Spanish</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Target Language
+                </label>
+                <Select onValueChange={setTargetLanguage}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select target language" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="hi">Hindi</SelectItem>
