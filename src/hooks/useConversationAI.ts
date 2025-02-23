@@ -13,7 +13,7 @@ export const useConversationAI = () => {
     try {
       console.log('Starting conversation with params:', { scenario, language, difficulty, nativeLanguage });
       
-      // First, request microphone access
+      // First, request microphone access with specific configuration
       console.log('Requesting microphone access...');
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -73,8 +73,12 @@ export const useConversationAI = () => {
         setStatus('connected');
       };
 
-      ws.onclose = () => {
-        console.log('WebSocket connection closed');
+      ws.onclose = (event) => {
+        console.log('WebSocket connection closed', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean
+        });
         setStatus('disconnected');
         setSocket(null);
       };
@@ -115,18 +119,41 @@ export const useConversationAI = () => {
               }
             }));
 
-            // Start recording after sending configuration
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = (event) => {
-              if (ws.readyState === WebSocket.OPEN && event.data.size > 0) {
-                ws.send(event.data);
-              }
+            console.log('Session configuration sent, initializing MediaRecorder...');
+            
+            // Create MediaRecorder with specific MIME type
+            const options = {
+              mimeType: 'audio/webm;codecs=opus',
+              audioBitsPerSecond: 16000
             };
-            mediaRecorder.start(100);
+
+            try {
+              mediaRecorder = new MediaRecorder(stream, options);
+              console.log('MediaRecorder initialized with options:', options);
+              
+              mediaRecorder.ondataavailable = (event) => {
+                if (ws.readyState === WebSocket.OPEN && event.data.size > 0) {
+                  console.log('Sending audio chunk, size:', event.data.size);
+                  ws.send(event.data);
+                }
+              };
+
+              mediaRecorder.onerror = (error) => {
+                console.error('MediaRecorder error:', error);
+              };
+
+              mediaRecorder.start(100);
+              console.log('MediaRecorder started');
+            } catch (error) {
+              console.error('MediaRecorder initialization error:', error);
+              throw error;
+            }
           } else if (message.type === 'speech_start') {
             setIsSpeaking(true);
           } else if (message.type === 'speech_end') {
             setIsSpeaking(false);
+          } else {
+            console.log('Received unknown message type:', message.type);
           }
         } catch (error) {
           console.error('Error handling message:', error);
