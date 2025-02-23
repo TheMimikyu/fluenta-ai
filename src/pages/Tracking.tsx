@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +13,9 @@ import {
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/types/database";
+
+type ConversationMetrics = Database['public']['Tables']['conversation_metrics']['Row'];
 
 const Tracking = () => {
   const navigate = useNavigate();
@@ -29,7 +33,7 @@ const Tracking = () => {
       try {
         const { data, error } = await supabase
           .from('conversation_metrics')
-          .select('*') as { data: Database['public']['Tables']['conversation_metrics']['Row'][] | null, error: any };
+          .select('*') as { data: ConversationMetrics[] | null, error: any };
 
         if (error) throw error;
 

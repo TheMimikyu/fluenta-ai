@@ -1,5 +1,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/types/database";
+
+type ConversationMetrics = Database['public']['Tables']['conversation_metrics']['Insert'];
 
 export async function saveConversationMetrics(conversationId: string) {
   try {
@@ -24,17 +27,19 @@ export async function saveConversationMetrics(conversationId: string) {
     const correction_attempts = data.analysis.data_collection_results.correction_attempts.value;
     const duration_seconds = data.metadata.call_duration_secs;
 
+    const metrics: ConversationMetrics = {
+      user_id: session.user.id,
+      conversation_id: conversationId,
+      detected_errors,
+      pronunciation_score,
+      correction_attempts,
+      duration_seconds
+    };
+
     // Save to database
     const { error } = await supabase
       .from('conversation_metrics')
-      .insert({
-        user_id: session.user.id,
-        conversation_id: conversationId,
-        detected_errors,
-        pronunciation_score,
-        correction_attempts,
-        duration_seconds
-      } as Database['public']['Tables']['conversation_metrics']['Row']);
+      .insert(metrics);
 
     if (error) throw error;
 
