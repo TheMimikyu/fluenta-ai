@@ -118,7 +118,15 @@ export const useConversationAI = () => {
 
           if (message.type === 'conversation_initiation_metadata') {
             console.log('Sending session configuration...');
-            // Send session configuration after receiving metadata
+            
+            // First send user name configuration
+            ws.send(JSON.stringify({
+              type: 'user.name',
+              name: userName
+            }));
+            console.log('User name configuration sent');
+
+            // Then send session configuration
             ws.send(JSON.stringify({
               type: 'session.update',
               session: {
@@ -131,8 +139,7 @@ export const useConversationAI = () => {
                   threshold: 0.5,
                   prefix_padding_ms: 300,
                   silence_duration_ms: 1000
-                },
-                user_name: userName
+                }
               }
             }));
 
