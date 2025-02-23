@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -12,19 +12,65 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Tracking = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-  
-  // Mock stats (replace with PostHog data later)
-  const stats = {
-    lessonsCompleted: 12,
-    timeSpent: "5h 30m",
-    accuracyRate: "85%",
-    commonErrors: ["Pronunciation", "Grammar"]
-  };
+  const [stats, setStats] = useState({
+    lessonsCompleted: 0,
+    timeSpent: "0h 0m",
+    accuracyRate: "0%",
+    commonErrors: [] as string[]
+  });
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('conversation_metrics')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          // Calculate total lessons
+          const lessonsCompleted = data.length;
+
+          // Calculate total time spent
+          const totalSeconds = data.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0);
+          const hours = Math.floor(totalSeconds / 3600);
+          const minutes = Math.floor((totalSeconds % 3600) / 60);
+          const timeSpent = `${hours}h ${minutes}m`;
+
+          // Calculate average accuracy
+          const avgAccuracy = data.reduce((acc, curr) => acc + (curr.pronunciation_score || 0), 0) / data.length;
+
+          // Get common errors
+          const errorsList = data
+            .map(m => m.detected_errors?.split(',') || [])
+            .flat()
+            .filter(Boolean)
+            .map(error => error.trim());
+          
+          const commonErrors = Array.from(new Set(errorsList));
+
+          setStats({
+            lessonsCompleted,
+            timeSpent,
+            accuracyRate: `${Math.round(avgAccuracy)}%`,
+            commonErrors: commonErrors.slice(0, 2) // Show top 2 most common errors
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching metrics:', error);
+      }
+    };
+
+    fetchMetrics();
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -66,13 +112,6 @@ const Tracking = () => {
                 onClick={() => navigate("/practice")}
               >
                 Practice
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/quiz")}
-              >
-                Quiz
               </Button>
               <Button
                 variant="ghost"

@@ -3,11 +3,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Conversation } from '@11labs/client';
+import { saveConversationMetrics } from '@/utils/conversationMetrics';
 
 export const useConversationAI = () => {
   const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'disconnected'>('idle');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [conversation, setConversation] = useState<Conversation | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const startConversation = useCallback(async (scenario: string, language: string, difficulty: string, nativeLanguage: string) => {
@@ -93,10 +95,19 @@ export const useConversationAI = () => {
           console.log('Conversation connected');
           setStatus('connected');
         },
-        onDisconnect: () => {
+        onDisconnect: async () => {
           console.log('Conversation disconnected');
           setStatus('disconnected');
           setConversation(null);
+          
+          // Save metrics when conversation ends
+          if (conversationId) {
+            try {
+              await saveConversationMetrics(conversationId);
+            } catch (error) {
+              console.error('Error saving metrics:', error);
+            }
+          }
         },
         onError: (error) => {
           console.error('Conversation error:', error);
@@ -109,7 +120,11 @@ export const useConversationAI = () => {
         },
         onMessage: (message) => {
           console.log('Received message:', message);
-          // For speech start/end events, handle using any properties present
+          // Store conversation ID when received
+          if (message.conversation_id && !conversationId) {
+            setConversationId(message.conversation_id);
+          }
+          // Handle speech events
           if (message.message?.includes('speech_start')) {
             setIsSpeaking(true);
           } else if (message.message?.includes('speech_end')) {
@@ -131,7 +146,7 @@ export const useConversationAI = () => {
       setStatus('disconnected');
       throw error;
     }
-  }, [toast]);
+  }, [toast, conversationId]);
 
   const endConversation = useCallback(() => {
     console.log('Ending conversation...');
