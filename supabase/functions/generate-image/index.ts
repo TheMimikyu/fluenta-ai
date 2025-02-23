@@ -5,14 +5,29 @@ import { corsHeaders } from "../_shared/cors.ts";
 const FAL_KEY = Deno.env.get("FAL_KEY");
 const FAL_API_URL = "https://queue.fal.run/fal-ai/flux-lora";
 
+console.log("Edge function starting...");
+
 serve(async (req) => {
+  console.log("Received request:", {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries()),
+  });
+
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS request");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { scenario } = await req.json();
+    const authorization = req.headers.get('Authorization');
+    console.log("Authorization header:", authorization ? "Present" : "Missing");
+
+    const body = await req.json();
+    console.log("Received request body:", body);
+
+    const { scenario } = body;
 
     if (!FAL_KEY) {
       console.error("FAL_KEY not found in environment variables");
@@ -26,7 +41,6 @@ serve(async (req) => {
     }
 
     console.log("Starting image generation for scenario:", scenario);
-    console.log("Using FAL API URL:", FAL_API_URL);
     
     // Initial request to start image generation
     try {
@@ -48,7 +62,7 @@ serve(async (req) => {
       }
 
       const result = await response.json();
-      console.log("Initial response:", result);
+      console.log("Initial FAL API response:", result);
 
       if (!result.request_id) {
         throw new Error('No request ID received from FAL AI');
@@ -63,7 +77,7 @@ serve(async (req) => {
       while (attempts < maxAttempts && !imageUrl) {
         console.log(`Polling attempt ${attempts + 1} for request ID: ${result.request_id}`);
         const pollResponse = await fetch(pollUrl, {
-          method: "GET", // Explicitly set method to GET for polling
+          method: "GET",
           headers: {
             "Authorization": `Key ${FAL_KEY}`,
             "Content-Type": "application/json",
@@ -77,7 +91,7 @@ serve(async (req) => {
         }
 
         const pollResult = await pollResponse.json();
-        console.log("Poll result status:", pollResult.status);
+        console.log("Poll result:", pollResult);
 
         if (pollResult.status === "completed" && pollResult.image?.url) {
           imageUrl = pollResult.image.url;
@@ -85,7 +99,6 @@ serve(async (req) => {
           break;
         }
 
-        // Wait 1 second before next poll
         await new Promise(resolve => setTimeout(resolve, 1000));
         attempts++;
       }
@@ -106,7 +119,7 @@ serve(async (req) => {
       );
     } catch (fetchError) {
       console.error("Fetch error details:", fetchError);
-      throw fetchError; // Re-throw to be caught by outer try-catch
+      throw fetchError;
     }
   } catch (error) {
     console.error("Error generating image:", error);
