@@ -29,13 +29,6 @@ export const PracticeNav = ({ onSignOut }: PracticeNavProps) => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/quiz")}
-            >
-              Quiz
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
               onClick={() => navigate("/tracking")}
             >
               Progress
