@@ -15,7 +15,15 @@ export const useConversationAI = () => {
       
       // First, request microphone access
       console.log('Requesting microphone access...');
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
       console.log('Microphone access granted');
 
       // Get current session
@@ -81,35 +89,51 @@ export const useConversationAI = () => {
         setStatus('disconnected');
       };
 
+      let mediaRecorder: MediaRecorder | null = null;
+
       ws.onmessage = async (event) => {
         try {
           const message = JSON.parse(event.data);
           console.log('Received message:', message);
 
-          if (message.type === 'speech_start') {
+          if (message.type === 'conversation_initiation_metadata') {
+            console.log('Sending session configuration...');
+            // Send session configuration after receiving metadata
+            ws.send(JSON.stringify({
+              type: 'session.update',
+              session: {
+                modalities: ['text', 'audio'],
+                instructions: `You are a ${language} language tutor helping a ${nativeLanguage} speaker practice ${language} in a scenario about ${scenario}. The student's level is ${difficulty}. Speak in ${language} but give instructions in ${nativeLanguage}.`,
+                input_audio_format: 'pcm_16000',
+                output_audio_format: 'pcm_16000',
+                turn_detection: {
+                  type: 'server_vad',
+                  threshold: 0.5,
+                  prefix_padding_ms: 300,
+                  silence_duration_ms: 1000
+                }
+              }
+            }));
+
+            // Start recording after sending configuration
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = (event) => {
+              if (ws.readyState === WebSocket.OPEN && event.data.size > 0) {
+                ws.send(event.data);
+              }
+            };
+            mediaRecorder.start(100);
+          } else if (message.type === 'speech_start') {
             setIsSpeaking(true);
           } else if (message.type === 'speech_end') {
             setIsSpeaking(false);
           }
-          // Handle other message types as needed
         } catch (error) {
           console.error('Error handling message:', error);
         }
       };
 
       setSocket(ws);
-
-      // Set up audio streaming
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = (event) => {
-        if (ws.readyState === WebSocket.OPEN && event.data.size > 0) {
-          ws.send(event.data);
-        }
-      };
-
-      // Start recording
-      mediaRecorder.start(100); // Send audio data every 100ms
-
       return data.conversation_url;
     } catch (error) {
       console.error('Error starting conversation:', error);
