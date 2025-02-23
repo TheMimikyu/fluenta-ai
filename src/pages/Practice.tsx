@@ -48,14 +48,17 @@ const Practice = () => {
     setIsGenerating(true);
     try {
       console.log("Calling generate-image function...");
-      const { data, error } = await supabase.functions.invoke('generate-image', {
-        body: { scenario }
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-image', {
+        body: { scenario },
+        headers: {
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        }
       });
 
-      if (error) throw error;
+      if (functionError) throw functionError;
 
-      if (data?.imageUrl) {
-        setGeneratedImage(data.imageUrl);
+      if (functionData?.imageUrl) {
+        setGeneratedImage(functionData.imageUrl);
       } else {
         throw new Error('No image URL received');
       }
