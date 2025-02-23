@@ -1,21 +1,43 @@
-
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, User } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      {/* Navigation */}
+      <nav className="bg-white shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+              <span className="text-blue-600 font-bold text-2xl">Fluenta AI</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-600"
+              onClick={() => {/* TODO: Implement auth */}}
+            >
+              <User className="h-5 w-5 mr-2" />
+              Sign In
+            </Button>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section */}
       <div className="container mx-auto px-4 pt-20 pb-16">
         <div className="max-w-4xl mx-auto text-center animate-in">
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Master Languages Naturally
+            Fluenta AI
           </h1>
+          <p className="text-2xl text-gray-600 mb-4">
+            Fluency, One Conversation at a Time
+          </p>
           <p className="text-xl text-gray-600 mb-8">
-            Immersive learning experience powered by AI. Practice conversations,
+            Immersive language learning experience powered by AI. Practice conversations,
             perfect your pronunciation, and track your progress.
           </p>
           <Button
@@ -101,7 +123,7 @@ const features = [
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
-          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
         />
       </svg>
     ),
