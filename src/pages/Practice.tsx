@@ -97,7 +97,8 @@ const Practice = () => {
           imageUrl={generatedImage}
           isFullScreen={isFullScreen}
           onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
-          onStartConversation={handleStartConversation}
+          scenario={scenario}
+          targetLanguage={targetLanguage}
         />
       ) : (
         <div className="container mx-auto p-6">
@@ -119,7 +120,8 @@ const Practice = () => {
               imageUrl={generatedImage}
               isFullScreen={false}
               onToggleFullScreen={() => setIsFullScreen(true)}
-              onStartConversation={handleStartConversation}
+              scenario={scenario}
+              targetLanguage={targetLanguage}
             />
           )}
         </div>
