@@ -1,10 +1,9 @@
 
 import { fal } from "@fal-ai/client";
 
-// Configure fal-ai client with the API key from Supabase secrets
+// Configure fal-ai client with the API key
 fal.config({
-  // The key is automatically injected from Supabase secrets
-  credentials: import.meta.env.FAL_KEY,
+  credentials: "fal_key_here", // Replace this with your FAL AI publishable key
 });
 
 export { fal };
