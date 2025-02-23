@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, User } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
-import { useNavigate } from "react-router-dom";
 
 const Practice = () => {
   const [language, setLanguage] = useState("");
@@ -19,16 +18,6 @@ const Practice = () => {
   const [difficulty, setDifficulty] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate("/");
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
-  };
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -51,7 +40,7 @@ const Practice = () => {
                 variant="ghost"
                 size="sm"
                 className="text-gray-600"
-                onClick={handleSignOut}
+                onClick={() => signOut()}
               >
                 Sign Out
               </Button>
