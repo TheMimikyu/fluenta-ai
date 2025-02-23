@@ -8,14 +8,25 @@ export const useConversationAI = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const { toast } = useToast();
 
-  const startConversation = useCallback(async (scenario: string, language: string) => {
+  const startConversation = useCallback(async (scenario: string, language: string, difficulty: string, nativeLanguage: string) => {
     try {
       // First, request microphone access
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
+      // Get current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('No active session');
+      }
+
       // Get conversation URL from our edge function
       const { data, error } = await supabase.functions.invoke('get-conversation-url', {
-        body: { scenario, language },
+        body: { 
+          scenario, 
+          language,
+          difficulty,
+          nativeLanguage
+        },
       });
 
       if (error) throw error;

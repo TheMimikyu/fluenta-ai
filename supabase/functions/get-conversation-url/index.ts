@@ -1,8 +1,10 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY')!;
+const AGENT_ID = 'ruoVlk0cqI7iUAoJOGLx';
 
 serve(async (req) => {
   // Handle CORS
@@ -13,9 +15,40 @@ serve(async (req) => {
   try {
     console.log('Starting conversation setup with ElevenLabs...');
     
-    // Get the request body
-    const { scenario, language } = await req.json();
-    console.log('Received scenario:', scenario, 'language:', language);
+    // Get the request body and authorization header
+    const { scenario, language: target_language, difficulty, nativeLanguage: native_language } = await req.json();
+    const authHeader = req.headers.get('Authorization');
+    
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
+
+    // Create Supabase client to get user data
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
+    // Get user data from the token
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
+    
+    if (userError || !user) {
+      throw new Error('Failed to get user data');
+    }
+
+    // Get user's full name from profiles
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      throw new Error('Failed to get user profile');
+    }
+
+    const user_name = profile.full_name || 'Student';
+    console.log('Got user name:', user_name);
 
     // Request headers for ElevenLabs API
     const headers = new Headers({
@@ -23,36 +56,9 @@ serve(async (req) => {
       'Content-Type': 'application/json',
     });
 
-    // First, create the conversation agent
-    const createResponse = await fetch(
-      "https://api.elevenlabs.io/v1/convai/agents",
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          name: "Language Practice Assistant",
-          description: "A language tutor that helps users practice conversations",
-          system_prompt: `You are a helpful language tutor. The student wants to practice ${language} in the following scenario: ${scenario}. 
-          Engage in a natural conversation, providing corrections and feedback when needed. Keep responses concise and focused on helping them improve their language skills.`,
-          initial_message: `Hello! I'm your ${language} conversation partner for today. We'll practice a conversation about ${scenario}. Would you like to start?`,
-          input_audio_config: {
-            voice_id: "CwhRBWXzGAHq8TQ4Fs17", // Roger voice
-            model_id: "eleven_multilingual_v2",
-          },
-        }),
-      }
-    );
-
-    if (!createResponse.ok) {
-      throw new Error(`ElevenLabs API error (create agent): ${await createResponse.text()}`);
-    }
-
-    const { agent_id } = await createResponse.json();
-    console.log('Successfully created agent with ID:', agent_id);
-
-    // Then, get the signed URL for this agent
+    // Get the signed URL with dynamic variables
     const urlResponse = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agent_id}`,
+      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${AGENT_ID}&user_name=${encodeURIComponent(user_name)}&target_language=${encodeURIComponent(target_language)}&environment=${encodeURIComponent(scenario)}&difficulty=${encodeURIComponent(difficulty)}&native_language=${encodeURIComponent(native_language)}`,
       {
         method: "GET",
         headers,
@@ -60,7 +66,7 @@ serve(async (req) => {
     );
 
     if (!urlResponse.ok) {
-      throw new Error(`ElevenLabs API error (get URL): ${await urlResponse.text()}`);
+      throw new Error(`ElevenLabs API error: ${await urlResponse.text()}`);
     }
 
     const { signed_url } = await urlResponse.json();
