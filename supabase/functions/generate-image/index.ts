@@ -1,10 +1,9 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-// Using the ESM URL for fal-ai
-import { fal } from "https://esm.sh/@fal-ai/serverless-client@1.2.3";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const FAL_KEY = Deno.env.get("FAL_KEY");
+const FAL_API_URL = "https://api.fal.ai/api/v1/lora/flux/stability";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -26,23 +25,28 @@ serve(async (req) => {
       );
     }
 
-    // Configure fal-ai client
-    fal.config({
-      credentials: FAL_KEY
-    });
-
     console.log("Starting image generation for scenario:", scenario);
     
-    const result = await fal.subscribe("fal-ai/flux-lora", {
-      input: {
-        prompt: `Realistic scene of ${scenario}, photographic style, detailed environment, natural lighting`,
+    const response = await fetch(FAL_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Key ${FAL_KEY}`,
+        "Content-Type": "application/json",
       },
-      logs: true,
+      body: JSON.stringify({
+        prompt: `Realistic scene of ${scenario}, photographic style, detailed environment, natural lighting`,
+      }),
     });
+
+    if (!response.ok) {
+      throw new Error(`FAL AI API error: ${response.statusText}`);
+    }
+
+    const result = await response.json();
 
     return new Response(
       JSON.stringify({ 
-        imageUrl: result.data.images?.[0]?.url,
+        imageUrl: result.images?.[0]?.url || result.image?.url,
         success: true 
       }),
       { 
