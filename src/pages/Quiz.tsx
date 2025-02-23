@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface FlashCard {
   word: string;
@@ -14,6 +21,8 @@ interface FlashCard {
 const Quiz = () => {
   const [flipped, setFlipped] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [language, setLanguage] = useState<string>("");
+  const [difficulty, setDifficulty] = useState<string>("");
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -46,6 +55,9 @@ const Quiz = () => {
   ]);
 
   const handleNextCards = async () => {
+    if (!language || !difficulty) {
+      return;
+    }
     setIsGenerating(true);
     // TODO: Implement Mistral API call
     setTimeout(() => setIsGenerating(false), 2000);
@@ -95,6 +107,45 @@ const Quiz = () => {
       </nav>
 
       <div className="container mx-auto p-8">
+        {/* Quiz Options */}
+        <div className="glass-card mb-8 animate-fade-in">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Quiz Settings</h2>
+          <div className="grid md:grid-cols-2 gap-6 mb-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Language
+              </label>
+              <Select onValueChange={setLanguage} value={language}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hi">Hindi</SelectItem>
+                  <SelectItem value="fr">French</SelectItem>
+                  <SelectItem value="de">German</SelectItem>
+                  <SelectItem value="es">Spanish</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Difficulty
+              </label>
+              <Select onValueChange={setDifficulty} value={difficulty}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select difficulty" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="beginner">Beginner</SelectItem>
+                  <SelectItem value="intermediate">Intermediate</SelectItem>
+                  <SelectItem value="advanced">Advanced</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
         {/* Visual Quiz Section */}
         <div className="glass-card mb-8 animate-fade-in">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Visual Flashcards</h2>
@@ -127,7 +178,7 @@ const Quiz = () => {
           </div>
           <Button
             onClick={handleNextCards}
-            disabled={isGenerating}
+            disabled={isGenerating || !language || !difficulty}
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md transition-all duration-300 hover:shadow-lg"
           >
             {isGenerating ? (

@@ -96,9 +96,11 @@ const Practice = () => {
                     <SelectValue placeholder="Select language" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="hi">Hindi</SelectItem>
                     <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="es">Spanish</SelectItem>
                     <SelectItem value="fr">French</SelectItem>
+                    <SelectItem value="de">German</SelectItem>
+                    <SelectItem value="es">Spanish</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -122,9 +124,9 @@ const Practice = () => {
                     <SelectValue placeholder="Select difficulty" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="easy">Easy</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="hard">Hard</SelectItem>
+                    <SelectItem value="beginner">Beginner</SelectItem>
+                    <SelectItem value="intermediate">Intermediate</SelectItem>
+                    <SelectItem value="advanced">Advanced</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
