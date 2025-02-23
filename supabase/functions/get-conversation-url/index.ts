@@ -11,10 +11,11 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Fetching conversation URL from ElevenLabs...');
+    console.log('Starting conversation setup with ElevenLabs...');
     
     // Get the request body
     const { scenario, language } = await req.json();
+    console.log('Received scenario:', scenario, 'language:', language);
 
     // Request headers for ElevenLabs API
     const headers = new Headers({
@@ -22,21 +23,48 @@ serve(async (req) => {
       'Content-Type': 'application/json',
     });
 
-    // Get the signed URL from ElevenLabs using the correct endpoint
-    const response = await fetch(
-      "https://api.elevenlabs.io/v1/convai/conversation/get_signed_url",
+    // First, create the conversation agent
+    const createResponse = await fetch(
+      "https://api.elevenlabs.io/v1/convai/agents",
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          name: "Language Practice Assistant",
+          description: "A language tutor that helps users practice conversations",
+          system_prompt: `You are a helpful language tutor. The student wants to practice ${language} in the following scenario: ${scenario}. 
+          Engage in a natural conversation, providing corrections and feedback when needed. Keep responses concise and focused on helping them improve their language skills.`,
+          initial_message: `Hello! I'm your ${language} conversation partner for today. We'll practice a conversation about ${scenario}. Would you like to start?`,
+          input_audio_config: {
+            voice_id: "CwhRBWXzGAHq8TQ4Fs17", // Roger voice
+            model_id: "eleven_multilingual_v2",
+          },
+        }),
+      }
+    );
+
+    if (!createResponse.ok) {
+      throw new Error(`ElevenLabs API error (create agent): ${await createResponse.text()}`);
+    }
+
+    const { agent_id } = await createResponse.json();
+    console.log('Successfully created agent with ID:', agent_id);
+
+    // Then, get the signed URL for this agent
+    const urlResponse = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agent_id}`,
       {
         method: "GET",
         headers,
       }
     );
 
-    if (!response.ok) {
-      throw new Error(`ElevenLabs API error: ${await response.text()}`);
+    if (!urlResponse.ok) {
+      throw new Error(`ElevenLabs API error (get URL): ${await urlResponse.text()}`);
     }
 
-    const { signed_url } = await response.json();
-    console.log('Successfully received conversation URL:', signed_url);
+    const { signed_url } = await urlResponse.json();
+    console.log('Successfully received conversation URL');
 
     return new Response(
       JSON.stringify({ conversation_url: signed_url }),
