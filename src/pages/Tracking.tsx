@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -65,7 +64,6 @@ const Tracking = () => {
               >
                 Quiz
               </Button>
-              <span className="text-sm text-gray-600">{user?.email}</span>
             </div>
           </div>
         </div>

@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, User } from "lucide-react";
@@ -49,7 +48,6 @@ const Index = () => {
                 >
                   Progress
                 </Button>
-                <span className="text-sm text-gray-600">{user.email}</span>
                 <Button
                   variant="ghost"
                   size="sm"
