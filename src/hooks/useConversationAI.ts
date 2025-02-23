@@ -83,19 +83,11 @@ export const useConversationAI = () => {
       const conv = await Conversation.startSession({
         agentId: data.agent_id,
         dynamicVariables: {
-          user_name: userName
-        },
-        settings: {
-          modalities: ['text', 'audio'],
-          instructions: `You are a ${language} language tutor helping a ${nativeLanguage} speaker practice ${language} in a scenario about ${scenario}. The student's level is ${difficulty}. Speak in ${language} but give instructions in ${nativeLanguage}.`,
-          input_audio_format: 'pcm_16000',
-          output_audio_format: 'pcm_16000',
-          turn_detection: {
-            type: 'server_vad',
-            threshold: 0.5,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 1000
-          }
+          user_name: userName,
+          target_language: language,
+          environment: scenario,
+          difficulty: difficulty,
+          native_language: nativeLanguage
         },
         onConnect: () => {
           console.log('Conversation connected');
@@ -117,11 +109,22 @@ export const useConversationAI = () => {
         },
         onMessage: (message) => {
           console.log('Received message:', message);
-          if (message.type === 'speech_start') {
+          // For speech start/end events, handle using any properties present
+          if (message.message?.includes('speech_start')) {
             setIsSpeaking(true);
-          } else if (message.type === 'speech_end') {
+          } else if (message.message?.includes('speech_end')) {
             setIsSpeaking(false);
           }
+        },
+        modalities: ['text', 'audio'],
+        instructions: `You are a ${language} language tutor helping a ${nativeLanguage} speaker practice ${language} in a scenario about ${scenario}. The student's level is ${difficulty}. Speak in ${language} but give instructions in ${nativeLanguage}.`,
+        inputAudioFormat: 'pcm_16000',
+        outputAudioFormat: 'pcm_16000',
+        turnDetection: {
+          type: 'server_vad',
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 1000
         }
       });
 
