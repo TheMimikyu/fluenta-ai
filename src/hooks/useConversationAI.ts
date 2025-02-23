@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -118,16 +117,16 @@ export const useConversationAI = () => {
           });
           setStatus('disconnected');
         },
-        onMessage: (message) => {
+        onMessage: (message: any) => {
           console.log('Received message:', message);
           // Store conversation ID when received
-          if (message.conversation_id && !conversationId) {
+          if (message?.conversation_id && !conversationId) {
             setConversationId(message.conversation_id);
           }
           // Handle speech events
-          if (message.message?.includes('speech_start')) {
+          if (message?.message?.includes('speech_start')) {
             setIsSpeaking(true);
-          } else if (message.message?.includes('speech_end')) {
+          } else if (message?.message?.includes('speech_end')) {
             setIsSpeaking(false);
           }
         }

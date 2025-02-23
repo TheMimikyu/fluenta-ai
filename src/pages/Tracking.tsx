@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -30,8 +29,7 @@ const Tracking = () => {
       try {
         const { data, error } = await supabase
           .from('conversation_metrics')
-          .select('*')
-          .order('created_at', { ascending: false });
+          .select('*') as { data: Database['public']['Tables']['conversation_metrics']['Row'][] | null, error: any };
 
         if (error) throw error;
 

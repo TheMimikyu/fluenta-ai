@@ -34,7 +34,7 @@ export async function saveConversationMetrics(conversationId: string) {
         pronunciation_score,
         correction_attempts,
         duration_seconds
-      });
+      } as Database['public']['Tables']['conversation_metrics']['Row']);
 
     if (error) throw error;
 
