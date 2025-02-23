@@ -1,9 +1,12 @@
+
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, User } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -14,15 +17,29 @@ const Index = () => {
             <div className="flex items-center space-x-2">
               <span className="text-blue-600 font-bold text-2xl">Fluenta AI</span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-600"
-              onClick={() => {/* TODO: Implement auth */}}
-            >
-              <User className="h-5 w-5 mr-2" />
-              Sign In
-            </Button>
+            {user ? (
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-600">{user.email}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-600"
+                  onClick={() => signOut()}
+                >
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-600"
+                onClick={() => navigate("/auth")}
+              >
+                <User className="h-5 w-5 mr-2" />
+                Sign In
+              </Button>
+            )}
           </div>
         </div>
       </nav>

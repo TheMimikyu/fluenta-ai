@@ -10,12 +10,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, User } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 
 const Practice = () => {
   const [language, setLanguage] = useState("");
   const [scenario, setScenario] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const { user, signOut } = useAuth();
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -32,15 +34,17 @@ const Practice = () => {
             <div className="flex items-center space-x-2">
               <span className="text-blue-600 font-bold text-2xl">Fluenta AI</span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-600"
-              onClick={() => {/* TODO: Implement auth */}}
-            >
-              <User className="h-5 w-5 mr-2" />
-              Sign In
-            </Button>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600">{user?.email}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-600"
+                onClick={() => signOut()}
+              >
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </nav>
