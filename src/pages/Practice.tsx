@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowLeft, Play } from "lucide-react";
+import { Loader2, ArrowLeft, Play, Minimize2 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -22,6 +22,7 @@ const Practice = () => {
   const [difficulty, setDifficulty] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string>("");
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -47,7 +48,6 @@ const Practice = () => {
 
     setIsGenerating(true);
     try {
-      // Get the session first
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
 
@@ -57,12 +57,11 @@ const Practice = () => {
 
       console.log("Starting function invocation with payload:", { scenario });
       
-      // Important: Pass a proper object as body and set method to POST
       const { data: functionData, error: functionError } = await supabase.functions.invoke(
         'generate-image',
         {
-          method: 'POST', // Explicitly set method to POST
-          body: { scenario }, // Pass object directly, supabase.functions.invoke will handle stringification
+          method: 'POST',
+          body: { scenario },
         }
       );
 
@@ -76,6 +75,7 @@ const Practice = () => {
       if (functionData?.imageUrl) {
         console.log("Setting generated image URL:", functionData.imageUrl);
         setGeneratedImage(functionData.imageUrl);
+        setIsFullScreen(true);
       } else {
         throw new Error('No image URL received');
       }
@@ -89,6 +89,10 @@ const Practice = () => {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
   };
 
   return (
@@ -134,122 +138,156 @@ const Practice = () => {
         </div>
       </nav>
 
-      <div className="container mx-auto p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-sm p-8 animate-in">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-              Language Practice
-            </h1>
-
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Native Language
-                </label>
-                <Select onValueChange={setNativeLanguage}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your native language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hi">Hindi</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="fr">French</SelectItem>
-                    <SelectItem value="de">German</SelectItem>
-                    <SelectItem value="es">Spanish</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Target Language
-                </label>
-                <Select onValueChange={setTargetLanguage}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select target language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hi">Hindi</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="fr">French</SelectItem>
-                    <SelectItem value="de">German</SelectItem>
-                    <SelectItem value="es">Spanish</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Scenario
-                </label>
-                <Input
-                  placeholder="Type scenario (e.g., job interview)"
-                  value={scenario}
-                  onChange={(e) => setScenario(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Difficulty
-                </label>
-                <Select onValueChange={setDifficulty}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select difficulty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="beginner">Beginner</SelectItem>
-                    <SelectItem value="intermediate">Intermediate</SelectItem>
-                    <SelectItem value="advanced">Advanced</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="text-center">
+      {isFullScreen && generatedImage ? (
+        <div className="fixed inset-0 z-50 bg-black">
+          <div className="absolute top-4 right-4 z-50">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleFullScreen}
+              className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="relative h-full">
+            <img
+              src={generatedImage}
+              alt="Generated scenario"
+              className="absolute inset-0 w-full h-full object-contain"
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
               <Button
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 rounded-full text-lg font-semibold transition-all duration-200 hover:transform hover:scale-105"
+                size="lg"
+                className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-full text-lg font-semibold transition-all duration-200 hover:transform hover:scale-105 flex items-center gap-2"
+                onClick={() => {
+                  console.log("Starting conversation...");
+                }}
               >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  "Generate Scenario"
-                )}
+                <Play className="h-5 w-5" />
+                Start Conversation
               </Button>
             </div>
-
-            {generatedImage && (
-              <div className="mt-8">
-                <div className="relative rounded-xl overflow-hidden h-[400px]">
-                  <img
-                    src={generatedImage}
-                    alt="Generated scenario"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  
-                  <div className="absolute inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center">
-                    <Button
-                      size="lg"
-                      className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-full text-lg font-semibold transition-all duration-200 hover:transform hover:scale-105 flex items-center gap-2"
-                      onClick={() => {
-                        console.log("Starting conversation...");
-                      }}
-                    >
-                      <Play className="h-5 w-5" />
-                      Start Conversation
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="container mx-auto p-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-sm p-8 animate-in">
+              <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+                Language Practice
+              </h1>
+
+              <div className="grid md:grid-cols-2 gap-6 mb-8">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Native Language
+                  </label>
+                  <Select onValueChange={setNativeLanguage}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your native language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hi">Hindi</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="fr">French</SelectItem>
+                      <SelectItem value="de">German</SelectItem>
+                      <SelectItem value="es">Spanish</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Target Language
+                  </label>
+                  <Select onValueChange={setTargetLanguage}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select target language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hi">Hindi</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="fr">French</SelectItem>
+                      <SelectItem value="de">German</SelectItem>
+                      <SelectItem value="es">Spanish</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Scenario
+                  </label>
+                  <Input
+                    placeholder="Type scenario (e.g., job interview)"
+                    value={scenario}
+                    onChange={(e) => setScenario(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Difficulty
+                  </label>
+                  <Select onValueChange={setDifficulty}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="beginner">Beginner</SelectItem>
+                      <SelectItem value="intermediate">Intermediate</SelectItem>
+                      <SelectItem value="advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <Button
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 rounded-full text-lg font-semibold transition-all duration-200 hover:transform hover:scale-105"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    "Generate Scenario"
+                  )}
+                </Button>
+              </div>
+
+              {generatedImage && !isFullScreen && (
+                <div className="mt-8">
+                  <div className="relative rounded-xl overflow-hidden h-[400px]">
+                    <img
+                      src={generatedImage}
+                      alt="Generated scenario"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    
+                    <div className="absolute inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center">
+                      <Button
+                        size="lg"
+                        className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-full text-lg font-semibold transition-all duration-200 hover:transform hover:scale-105 flex items-center gap-2"
+                        onClick={() => {
+                          console.log("Starting conversation...");
+                        }}
+                      >
+                        <Play className="h-5 w-5" />
+                        Start Conversation
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
