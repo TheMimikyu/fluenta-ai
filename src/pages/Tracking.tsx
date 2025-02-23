@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -14,7 +15,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 const Tracking = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   
   // Mock stats (replace with PostHog data later)
@@ -23,6 +24,15 @@ const Tracking = () => {
     timeSpent: "5h 30m",
     accuracyRate: "85%",
     commonErrors: ["Pronunciation", "Grammar"]
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   const handleEmailProgress = async () => {
@@ -63,6 +73,13 @@ const Tracking = () => {
                 onClick={() => navigate("/quiz")}
               >
                 Quiz
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignOut}
+              >
+                Sign Out
               </Button>
             </div>
           </div>
