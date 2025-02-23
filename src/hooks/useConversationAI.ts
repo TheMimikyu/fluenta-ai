@@ -2,11 +2,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Conversation } from '@11labs/client';
 
 export const useConversationAI = () => {
   const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'disconnected'>('idle');
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [conversation, setConversation] = useState<Conversation | null>(null);
   const { toast } = useToast();
 
   const startConversation = useCallback(async (scenario: string, language: string, difficulty: string, nativeLanguage: string) => {
@@ -15,7 +16,7 @@ export const useConversationAI = () => {
       
       // First, request microphone access with specific configuration
       console.log('Requesting microphone access...');
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      await navigator.mediaDevices.getUserMedia({ 
         audio: {
           sampleRate: 16000,
           channelCount: 1,
@@ -72,120 +73,61 @@ export const useConversationAI = () => {
         throw error;
       }
       
-      if (!data?.conversation_url) {
-        console.error('No conversation URL in response:', data);
-        throw new Error('No conversation URL received');
+      if (!data?.agent_id) {
+        console.error('No agent ID in response:', data);
+        throw new Error('No agent ID received');
       }
 
-      // Initialize WebSocket connection
-      console.log('Connecting to WebSocket...', data.conversation_url);
-      setStatus('connecting');
-      
-      const ws = new WebSocket(data.conversation_url);
-      
-      // Set up WebSocket event handlers
-      ws.onopen = () => {
-        console.log('WebSocket connection established');
-        setStatus('connected');
-      };
-
-      ws.onclose = (event) => {
-        console.log('WebSocket connection closed', {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean
-        });
-        setStatus('disconnected');
-        setSocket(null);
-      };
-
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        toast({
-          title: 'Connection Error',
-          description: 'Failed to connect to conversation service.',
-          variant: 'destructive',
-        });
-        setStatus('disconnected');
-      };
-
-      let mediaRecorder: MediaRecorder | null = null;
-
-      ws.onmessage = async (event) => {
-        try {
-          const message = JSON.parse(event.data);
+      // Initialize conversation using @11labs/client
+      console.log('Initializing conversation...');
+      const conv = await Conversation.startSession({
+        agentId: data.agent_id,
+        dynamicVariables: {
+          user_name: userName
+        },
+        settings: {
+          modalities: ['text', 'audio'],
+          instructions: `You are a ${language} language tutor helping a ${nativeLanguage} speaker practice ${language} in a scenario about ${scenario}. The student's level is ${difficulty}. Speak in ${language} but give instructions in ${nativeLanguage}.`,
+          input_audio_format: 'pcm_16000',
+          output_audio_format: 'pcm_16000',
+          turn_detection: {
+            type: 'server_vad',
+            threshold: 0.5,
+            prefix_padding_ms: 300,
+            silence_duration_ms: 1000
+          }
+        },
+        onConnect: () => {
+          console.log('Conversation connected');
+          setStatus('connected');
+        },
+        onDisconnect: () => {
+          console.log('Conversation disconnected');
+          setStatus('disconnected');
+          setConversation(null);
+        },
+        onError: (error) => {
+          console.error('Conversation error:', error);
+          toast({
+            title: 'Connection Error',
+            description: 'Failed to connect to conversation service.',
+            variant: 'destructive',
+          });
+          setStatus('disconnected');
+        },
+        onMessage: (message) => {
           console.log('Received message:', message);
-
-          if (message.type === 'conversation_initiation_metadata') {
-            console.log('Sending session configuration...');
-            
-            // First send user name configuration
-            ws.send(JSON.stringify({
-              type: 'user.name',
-              name: userName
-            }));
-            console.log('User name configuration sent');
-
-            // Then send session configuration
-            ws.send(JSON.stringify({
-              type: 'session.update',
-              session: {
-                modalities: ['text', 'audio'],
-                instructions: `You are a ${language} language tutor helping a ${nativeLanguage} speaker practice ${language} in a scenario about ${scenario}. The student's level is ${difficulty}. Speak in ${language} but give instructions in ${nativeLanguage}.`,
-                input_audio_format: 'pcm_16000',
-                output_audio_format: 'pcm_16000',
-                turn_detection: {
-                  type: 'server_vad',
-                  threshold: 0.5,
-                  prefix_padding_ms: 300,
-                  silence_duration_ms: 1000
-                }
-              }
-            }));
-
-            console.log('Session configuration sent, initializing MediaRecorder...');
-            
-            // Create MediaRecorder with specific MIME type
-            const options = {
-              mimeType: 'audio/webm;codecs=opus',
-              audioBitsPerSecond: 16000
-            };
-
-            try {
-              mediaRecorder = new MediaRecorder(stream, options);
-              console.log('MediaRecorder initialized with options:', options);
-              
-              mediaRecorder.ondataavailable = (event) => {
-                if (ws.readyState === WebSocket.OPEN && event.data.size > 0) {
-                  console.log('Sending audio chunk, size:', event.data.size);
-                  ws.send(event.data);
-                }
-              };
-
-              mediaRecorder.onerror = (error) => {
-                console.error('MediaRecorder error:', error);
-              };
-
-              mediaRecorder.start(100);
-              console.log('MediaRecorder started');
-            } catch (error) {
-              console.error('MediaRecorder initialization error:', error);
-              throw error;
-            }
-          } else if (message.type === 'speech_start') {
+          if (message.type === 'speech_start') {
             setIsSpeaking(true);
           } else if (message.type === 'speech_end') {
             setIsSpeaking(false);
-          } else {
-            console.log('Received unknown message type:', message.type);
           }
-        } catch (error) {
-          console.error('Error handling message:', error);
         }
-      };
+      });
 
-      setSocket(ws);
-      return data.conversation_url;
+      setConversation(conv);
+      setStatus('connected');
+      return conv;
     } catch (error) {
       console.error('Error starting conversation:', error);
       toast({
@@ -200,20 +142,20 @@ export const useConversationAI = () => {
 
   const endConversation = useCallback(() => {
     console.log('Ending conversation...');
-    if (socket) {
-      socket.close();
+    if (conversation) {
+      conversation.endSession();
+      setConversation(null);
     }
     setStatus('disconnected');
-    setSocket(null);
-  }, [socket]);
+  }, [conversation]);
 
   useEffect(() => {
     return () => {
-      if (socket) {
-        socket.close();
+      if (conversation) {
+        conversation.endSession();
       }
     };
-  }, [socket]);
+  }, [conversation]);
 
   return {
     status,
