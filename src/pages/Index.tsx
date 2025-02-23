@@ -8,6 +8,15 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Navigation */}
@@ -19,12 +28,33 @@ const Index = () => {
             </div>
             {user ? (
               <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/practice")}
+                >
+                  Practice
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/quiz")}
+                >
+                  Quiz
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/tracking")}
+                >
+                  Progress
+                </Button>
                 <span className="text-sm text-gray-600">{user.email}</span>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-gray-600"
-                  onClick={() => signOut()}
+                  onClick={handleSignOut}
                 >
                   Sign Out
                 </Button>

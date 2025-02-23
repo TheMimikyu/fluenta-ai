@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { FcGoogle } from "react-icons/fc";
+import { FaGithub } from "react-icons/fa";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -74,6 +75,21 @@ const Auth = () => {
     }
   };
 
+  const handleGitHubSignIn = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <div className="container mx-auto px-4 py-8">
@@ -128,15 +144,27 @@ const Auth = () => {
             </div>
           </div>
 
-          <Button
-            variant="outline"
-            onClick={handleGoogleSignIn}
-            className="w-full"
-            disabled={loading}
-          >
-            <FcGoogle className="mr-2 h-5 w-5" />
-            Sign in with Google
-          </Button>
+          <div className="space-y-3">
+            <Button
+              variant="outline"
+              onClick={handleGoogleSignIn}
+              className="w-full"
+              disabled={loading}
+            >
+              <FcGoogle className="mr-2 h-5 w-5" />
+              Sign in with Google
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={handleGitHubSignIn}
+              className="w-full"
+              disabled={loading}
+            >
+              <FaGithub className="mr-2 h-5 w-5" />
+              Sign in with GitHub
+            </Button>
+          </div>
         </div>
       </div>
     </div>
