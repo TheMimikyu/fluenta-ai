@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -72,9 +73,9 @@ serve(async (req) => {
       );
     }
 
-    // Make initial request to FAL API
-    console.log("Making request to FAL API with scenario:", scenario);
-    const falResponse = await fetch(FAL_API_URL, {
+    // Step 1: Submit the initial request
+    console.log("Submitting initial request to FAL API with scenario:", scenario);
+    const initialResponse = await fetch(FAL_API_URL, {
       method: "POST",
       headers: {
         "Authorization": `Key ${FAL_KEY}`,
@@ -85,29 +86,29 @@ serve(async (req) => {
       }),
     });
 
-    if (!falResponse.ok) {
-      const errorText = await falResponse.text();
-      console.error("FAL API error:", errorText);
+    if (!initialResponse.ok) {
+      const errorText = await initialResponse.text();
+      console.error("FAL API initial request error:", errorText);
       return new Response(
         JSON.stringify({
           error: "FAL API error",
-          details: `${falResponse.status}: ${falResponse.statusText}`
+          details: `${initialResponse.status}: ${initialResponse.statusText}`
         }),
         {
-          status: falResponse.status,
+          status: initialResponse.status,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         }
       );
     }
 
-    const falData = await falResponse.json();
-    console.log("FAL API initial response:", falData);
+    const initialData = await initialResponse.json();
+    console.log("FAL API initial response:", initialData);
 
-    if (!falData.status_url) {
+    if (!initialData.request_id) {
       return new Response(
         JSON.stringify({
           error: "Invalid FAL response",
-          details: "No status URL received"
+          details: "No request ID received"
         }),
         {
           status: 500,
@@ -116,14 +117,19 @@ serve(async (req) => {
       );
     }
 
-    // Poll for results using the status_url
+    const requestId = initialData.request_id;
     let imageUrl = null;
     let attempts = 0;
-    const maxAttempts = 30;
+    const maxAttempts = 10; // Reduced since we know it takes about 4-5 seconds
+    const pollInterval = 1000; // Poll every second
 
+    // Step 2: Poll for status until complete
     while (attempts < maxAttempts && !imageUrl) {
-      console.log(`Polling attempt ${attempts + 1} using status URL: ${falData.status_url}`);
-      const pollResponse = await fetch(falData.status_url, {
+      console.log(`Polling attempt ${attempts + 1} for request ${requestId}`);
+      
+      // Check status
+      const statusUrl = `${FAL_API_URL}/requests/${requestId}/status`;
+      const statusResponse = await fetch(statusUrl, {
         method: "GET",
         headers: {
           "Authorization": `Key ${FAL_KEY}`,
@@ -131,25 +137,41 @@ serve(async (req) => {
         },
       });
 
-      if (!pollResponse.ok) {
-        const errorText = await pollResponse.text();
-        console.error(`Polling error on attempt ${attempts + 1}:`, errorText);
+      if (!statusResponse.ok) {
+        console.error(`Status check failed on attempt ${attempts + 1}:`, await statusResponse.text());
         attempts++;
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Longer delay between retries
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
         continue;
       }
 
-      const pollData = await pollResponse.json();
-      console.log("Poll response:", pollData);
+      const statusData = await statusResponse.json();
+      console.log("Status response:", statusData);
 
-      if (pollData.status === "completed" && pollData.image?.url) {
-        imageUrl = pollData.image.url;
-        break;
-      } else if (pollData.status === "failed") {
+      if (statusData.status === "completed") {
+        // Step 3: Get the final result
+        const resultUrl = `${FAL_API_URL}/requests/${requestId}`;
+        const resultResponse = await fetch(resultUrl, {
+          method: "GET",
+          headers: {
+            "Authorization": `Key ${FAL_KEY}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (resultResponse.ok) {
+          const resultData = await resultResponse.json();
+          console.log("Result data:", resultData);
+          
+          if (resultData.image?.url) {
+            imageUrl = resultData.image.url;
+            break;
+          }
+        }
+      } else if (statusData.status === "failed") {
         return new Response(
           JSON.stringify({
             error: "Generation failed",
-            details: pollData.error || "Image generation failed"
+            details: statusData.error || "Image generation failed"
           }),
           {
             status: 500,
@@ -158,8 +180,8 @@ serve(async (req) => {
         );
       }
 
-      await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay between polls
       attempts++;
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
     }
 
     if (!imageUrl) {
