@@ -21,13 +21,40 @@ serve(async (req) => {
   }
 
   try {
-    const authorization = req.headers.get('Authorization');
-    console.log("Authorization header:", authorization ? "Present" : "Missing");
+    // Validate request body
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid request body",
+          details: "Request body must be valid JSON"
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
 
-    const body = await req.json();
-    console.log("Received request body:", body);
+    console.log("Parsed request body:", body);
 
     const { scenario } = body;
+
+    if (!scenario) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Missing scenario",
+          details: "Scenario is required in the request body"
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
 
     if (!FAL_KEY) {
       console.error("FAL_KEY not found in environment variables");
@@ -58,14 +85,48 @@ serve(async (req) => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("FAL API error response:", errorText);
-        throw new Error(`FAL AI API error: ${response.status} ${response.statusText}`);
+        return new Response(
+          JSON.stringify({ 
+            error: "FAL API error",
+            details: `${response.status}: ${response.statusText}`
+          }),
+          { 
+            status: response.status,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
       }
 
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch (parseError) {
+        console.error("Error parsing FAL API response:", parseError);
+        return new Response(
+          JSON.stringify({ 
+            error: "Invalid FAL API response",
+            details: "Could not parse response from FAL API"
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+
       console.log("Initial FAL API response:", result);
 
       if (!result.request_id) {
-        throw new Error('No request ID received from FAL AI');
+        return new Response(
+          JSON.stringify({ 
+            error: "Invalid response",
+            details: "No request ID received from FAL AI"
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
       }
 
       // Poll for the result using the request ID
@@ -76,6 +137,7 @@ serve(async (req) => {
 
       while (attempts < maxAttempts && !imageUrl) {
         console.log(`Polling attempt ${attempts + 1} for request ID: ${result.request_id}`);
+        
         const pollResponse = await fetch(pollUrl, {
           method: "GET",
           headers: {
@@ -87,10 +149,35 @@ serve(async (req) => {
         if (!pollResponse.ok) {
           const errorText = await pollResponse.text();
           console.error("Poll error response:", errorText);
-          throw new Error(`Error polling result: ${pollResponse.status} ${pollResponse.statusText}`);
+          return new Response(
+            JSON.stringify({ 
+              error: "Polling error",
+              details: `${pollResponse.status}: ${pollResponse.statusText}`
+            }),
+            { 
+              status: pollResponse.status,
+              headers: { ...corsHeaders, "Content-Type": "application/json" }
+            }
+          );
         }
 
-        const pollResult = await pollResponse.json();
+        let pollResult;
+        try {
+          pollResult = await pollResponse.json();
+        } catch (parseError) {
+          console.error("Error parsing poll response:", parseError);
+          return new Response(
+            JSON.stringify({ 
+              error: "Invalid polling response",
+              details: "Could not parse polling response"
+            }),
+            { 
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" }
+            }
+          );
+        }
+
         console.log("Poll result:", pollResult);
 
         if (pollResult.status === "completed" && pollResult.image?.url) {
@@ -104,7 +191,16 @@ serve(async (req) => {
       }
 
       if (!imageUrl) {
-        throw new Error('Image generation timed out or failed');
+        return new Response(
+          JSON.stringify({ 
+            error: "Timeout",
+            details: "Image generation timed out or failed"
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
       }
 
       return new Response(
@@ -119,14 +215,23 @@ serve(async (req) => {
       );
     } catch (fetchError) {
       console.error("Fetch error details:", fetchError);
-      throw fetchError;
+      return new Response(
+        JSON.stringify({ 
+          error: "Network error",
+          details: fetchError.message
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
   } catch (error) {
     console.error("Error generating image:", error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        details: `Failed to generate image: ${error.toString()}`
+        error: "Server error",
+        details: error.message
       }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
