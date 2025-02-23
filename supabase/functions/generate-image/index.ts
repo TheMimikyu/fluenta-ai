@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.fresh.dev/std@v1/http/server.ts";
-import { fal } from "@fal-ai/serverless-client";
+// Using the ESM URL for fal-ai
+import { fal } from "https://esm.sh/@fal-ai/serverless-client@1.2.3";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const FAL_KEY = Deno.env.get("FAL_KEY");
