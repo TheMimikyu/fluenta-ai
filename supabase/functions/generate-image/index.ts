@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -102,13 +101,13 @@ serve(async (req) => {
     }
 
     const falData = await falResponse.json();
-    console.log("FAL API response:", falData);
+    console.log("FAL API initial response:", falData);
 
-    if (!falData.request_id) {
+    if (!falData.status_url) {
       return new Response(
         JSON.stringify({
           error: "Invalid FAL response",
-          details: "No request ID received"
+          details: "No status URL received"
         }),
         {
           status: 500,
@@ -117,15 +116,15 @@ serve(async (req) => {
       );
     }
 
-    // Poll for results
+    // Poll for results using the status_url
     let imageUrl = null;
     let attempts = 0;
     const maxAttempts = 30;
 
     while (attempts < maxAttempts && !imageUrl) {
-      console.log(`Polling attempt ${attempts + 1} for request ID: ${falData.request_id}`);
-      const pollResponse = await fetch(`${FAL_API_URL}/${falData.request_id}`, {
-        method: "GET", // Explicitly set method to GET for polling
+      console.log(`Polling attempt ${attempts + 1} using status URL: ${falData.status_url}`);
+      const pollResponse = await fetch(falData.status_url, {
+        method: "GET",
         headers: {
           "Authorization": `Key ${FAL_KEY}`,
           "Content-Type": "application/json",
@@ -135,31 +134,8 @@ serve(async (req) => {
       if (!pollResponse.ok) {
         const errorText = await pollResponse.text();
         console.error(`Polling error on attempt ${attempts + 1}:`, errorText);
-        
-        // If we get a 405, let's try with POST method
-        if (pollResponse.status === 405) {
-          console.log("Received 405, trying with POST method...");
-          const postPollResponse = await fetch(`${FAL_API_URL}/${falData.request_id}`, {
-            method: "POST",
-            headers: {
-              "Authorization": `Key ${FAL_KEY}`,
-              "Content-Type": "application/json",
-            },
-          });
-          
-          if (postPollResponse.ok) {
-            const postPollData = await postPollResponse.json();
-            console.log("POST poll response:", postPollData);
-            
-            if (postPollData.status === "completed" && postPollData.image?.url) {
-              imageUrl = postPollData.image.url;
-              break;
-            }
-          } else {
-            console.error("POST polling also failed:", await postPollResponse.text());
-          }
-        }
         attempts++;
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Longer delay between retries
         continue;
       }
 
@@ -169,9 +145,20 @@ serve(async (req) => {
       if (pollData.status === "completed" && pollData.image?.url) {
         imageUrl = pollData.image.url;
         break;
+      } else if (pollData.status === "failed") {
+        return new Response(
+          JSON.stringify({
+            error: "Generation failed",
+            details: pollData.error || "Image generation failed"
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
       }
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay between polls
       attempts++;
     }
 
