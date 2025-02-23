@@ -46,6 +46,7 @@ const Practice = () => {
 
     setIsGenerating(true);
     try {
+      console.log("Starting image generation...");
       const result = await fal.subscribe("fal-ai/flux-lora", {
         input: {
           prompt: `Realistic scene of ${scenario}, photographic style, detailed environment, natural lighting`,
@@ -65,7 +66,7 @@ const Practice = () => {
       console.error("Error generating image:", error);
       toast({
         title: "Error",
-        description: "Failed to generate image. Please try again.",
+        description: "Failed to generate image. Please check your API key configuration.",
         variant: "destructive",
       });
     } finally {
