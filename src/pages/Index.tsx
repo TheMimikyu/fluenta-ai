@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, User } from "lucide-react";
@@ -6,6 +7,15 @@ import { useAuth } from "@/components/AuthProvider";
 const Index = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -44,7 +54,7 @@ const Index = () => {
                   variant="ghost"
                   size="sm"
                   className="text-gray-600"
-                  onClick={() => signOut()}
+                  onClick={handleSignOut}
                 >
                   Sign Out
                 </Button>
