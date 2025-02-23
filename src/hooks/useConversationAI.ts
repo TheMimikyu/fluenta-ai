@@ -115,9 +115,7 @@ export const useConversationAI = () => {
           } else if (message.message?.includes('speech_end')) {
             setIsSpeaking(false);
           }
-        },
-        inputAudioFormat: 'pcm_16000',
-        outputAudioFormat: 'pcm_16000'
+        }
       });
 
       setConversation(conv);
