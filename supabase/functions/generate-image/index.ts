@@ -147,7 +147,7 @@ serve(async (req) => {
       const statusData = await statusResponse.json();
       console.log("Status response:", statusData);
 
-      if (statusData.status === "COMPLETED") {  // Note: Changed to uppercase COMPLETED
+      if (statusData.status === "COMPLETED") {
         // Step 3: Get the final result using the response_url from status
         const resultResponse = await fetch(statusData.response_url, {
           method: "GET",
@@ -161,8 +161,9 @@ serve(async (req) => {
           const resultData = await resultResponse.json();
           console.log("Result data:", resultData);
           
-          if (resultData.image?.url) {
-            imageUrl = resultData.image.url;
+          // Check for images array and get the first image URL
+          if (resultData.images?.[0]?.url) {
+            imageUrl = resultData.images[0].url;
             break;
           } else {
             console.error("No image URL in result data:", resultData);
@@ -170,7 +171,7 @@ serve(async (req) => {
         } else {
           console.error("Failed to get result:", await resultResponse.text());
         }
-      } else if (statusData.status === "FAILED") {  // Note: Changed to uppercase FAILED
+      } else if (statusData.status === "FAILED") {
         return new Response(
           JSON.stringify({
             error: "Generation failed",
