@@ -13,6 +13,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import { fal } from "@/config/fal";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Practice = () => {
   const [targetLanguage, setTargetLanguage] = useState("");
@@ -46,27 +47,23 @@ const Practice = () => {
 
     setIsGenerating(true);
     try {
-      console.log("Starting image generation...");
-      const result = await fal.subscribe("fal-ai/flux-lora", {
-        input: {
-          prompt: `Realistic scene of ${scenario}, photographic style, detailed environment, natural lighting`,
-        },
-        logs: true,
-        onQueueUpdate: (update) => {
-          if (update.status === "IN_PROGRESS") {
-            update.logs.map((log) => log.message).forEach(console.log);
-          }
-        },
+      console.log("Calling generate-image function...");
+      const { data, error } = await supabase.functions.invoke('generate-image', {
+        body: { scenario }
       });
 
-      if (result.data.images?.[0]?.url) {
-        setGeneratedImage(result.data.images[0].url);
+      if (error) throw error;
+
+      if (data?.imageUrl) {
+        setGeneratedImage(data.imageUrl);
+      } else {
+        throw new Error('No image URL received');
       }
     } catch (error) {
       console.error("Error generating image:", error);
       toast({
         title: "Error",
-        description: "Failed to generate image. Please check your API key configuration.",
+        description: "Failed to generate image. Please try again.",
         variant: "destructive",
       });
     } finally {
