@@ -120,8 +120,8 @@ serve(async (req) => {
     const requestId = initialData.request_id;
     let imageUrl = null;
     let attempts = 0;
-    const maxAttempts = 10; // Reduced since we know it takes about 4-5 seconds
-    const pollInterval = 1000; // Poll every second
+    const maxAttempts = 10;
+    const pollInterval = 1000;
 
     // Step 2: Poll for status until complete
     while (attempts < maxAttempts && !imageUrl) {
@@ -147,10 +147,9 @@ serve(async (req) => {
       const statusData = await statusResponse.json();
       console.log("Status response:", statusData);
 
-      if (statusData.status === "completed") {
-        // Step 3: Get the final result
-        const resultUrl = `${FAL_API_URL}/requests/${requestId}`;
-        const resultResponse = await fetch(resultUrl, {
+      if (statusData.status === "COMPLETED") {  // Note: Changed to uppercase COMPLETED
+        // Step 3: Get the final result using the response_url from status
+        const resultResponse = await fetch(statusData.response_url, {
           method: "GET",
           headers: {
             "Authorization": `Key ${FAL_KEY}`,
@@ -165,9 +164,13 @@ serve(async (req) => {
           if (resultData.image?.url) {
             imageUrl = resultData.image.url;
             break;
+          } else {
+            console.error("No image URL in result data:", resultData);
           }
+        } else {
+          console.error("Failed to get result:", await resultResponse.text());
         }
-      } else if (statusData.status === "failed") {
+      } else if (statusData.status === "FAILED") {  // Note: Changed to uppercase FAILED
         return new Response(
           JSON.stringify({
             error: "Generation failed",
@@ -188,7 +191,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           error: "Generation timeout",
-          details: "Image generation timed out"
+          details: "Image generation timed out or no image URL received"
         }),
         {
           status: 500,
