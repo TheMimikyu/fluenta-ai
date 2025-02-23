@@ -16,39 +16,48 @@ serve(async (req) => {
     console.log('Starting conversation setup with ElevenLabs...');
     
     // Get the request body and authorization header
-    const { scenario, language: target_language, difficulty, nativeLanguage: native_language } = await req.json();
+    const body = await req.json();
+    console.log('Request body:', body);
+    
+    const { scenario, language: target_language, difficulty, nativeLanguage: native_language } = body;
     const authHeader = req.headers.get('Authorization');
+    console.log('Auth header present:', !!authHeader);
     
     if (!authHeader) {
       throw new Error('No authorization header');
     }
 
     // Create Supabase client to get user data
+    console.log('Creating Supabase client...');
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // Get user data from the token
+    console.log('Getting user data from token...');
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
+    console.log('User data result:', { user: !!user, error: userError });
     
     if (userError || !user) {
       throw new Error('Failed to get user data');
     }
 
     // Get user's full name from profiles
+    console.log('Getting user profile...');
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('full_name')
       .eq('id', user.id)
       .single();
+    console.log('Profile data result:', { profile, error: profileError });
 
     if (profileError) {
       throw new Error('Failed to get user profile');
     }
 
     const user_name = profile.full_name || 'Student';
-    console.log('Got user name:', user_name);
+    console.log('Using user name:', user_name);
 
     // Request headers for ElevenLabs API
     const headers = new Headers({
@@ -57,16 +66,18 @@ serve(async (req) => {
     });
 
     // Get the signed URL with dynamic variables
-    const urlResponse = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${AGENT_ID}&user_name=${encodeURIComponent(user_name)}&target_language=${encodeURIComponent(target_language)}&environment=${encodeURIComponent(scenario)}&difficulty=${encodeURIComponent(difficulty)}&native_language=${encodeURIComponent(native_language)}`,
-      {
-        method: "GET",
-        headers,
-      }
-    );
+    const url = `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${AGENT_ID}&user_name=${encodeURIComponent(user_name)}&target_language=${encodeURIComponent(target_language)}&environment=${encodeURIComponent(scenario)}&difficulty=${encodeURIComponent(difficulty)}&native_language=${encodeURIComponent(native_language)}`;
+    console.log('Requesting signed URL:', url);
+    
+    const urlResponse = await fetch(url, {
+      method: "GET",
+      headers,
+    });
 
     if (!urlResponse.ok) {
-      throw new Error(`ElevenLabs API error: ${await urlResponse.text()}`);
+      const errorText = await urlResponse.text();
+      console.error('ElevenLabs API error:', errorText);
+      throw new Error(`ElevenLabs API error: ${errorText}`);
     }
 
     const { signed_url } = await urlResponse.json();
