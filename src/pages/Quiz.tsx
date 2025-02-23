@@ -1,15 +1,9 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  BookOpen, 
-  Clock, 
-  BrainCircuit, 
-  AlertTriangle,
-  Send,
-  Loader2
-} from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import { useNavigate } from "react-router-dom";
 
 interface FlashCard {
   word: string;
@@ -20,7 +14,17 @@ interface FlashCard {
 const Quiz = () => {
   const [flipped, setFlipped] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   // Mock flashcards data (replace with real API calls later)
   const [flashcards] = useState<FlashCard[]>([
@@ -41,27 +45,55 @@ const Quiz = () => {
     }
   ]);
 
-  // Mock stats (replace with PostHog data later)
-  const stats = {
-    lessonsCompleted: 12,
-    timeSpent: "5h 30m",
-    accuracyRate: "85%",
-    commonErrors: ["Pronunciation", "Grammar"]
-  };
-
   const handleNextCards = async () => {
     setIsGenerating(true);
     // TODO: Implement Mistral API call
     setTimeout(() => setIsGenerating(false), 2000);
   };
 
-  const handleEmailProgress = async () => {
-    // TODO: Implement Make workflow trigger
-    console.log("Triggering email workflow");
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-blue-50">
+      <nav className="bg-white/80 backdrop-blur-sm shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(-1)}
+              >
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Back
+              </Button>
+              <span className="text-blue-600 font-bold text-2xl">Quiz</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/practice")}
+              >
+                Practice
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/tracking")}
+              >
+                Progress
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignOut}
+              >
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
       <div className="container mx-auto p-8">
         {/* Visual Quiz Section */}
         <div className="glass-card mb-8 animate-fade-in">
@@ -106,55 +138,6 @@ const Quiz = () => {
             ) : (
               "Next Cards"
             )}
-          </Button>
-        </div>
-
-        {/* Tracking & Feedback Section */}
-        <div className="glass-card animate-fade-in">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Learning Progress</h2>
-          <div className="grid md:grid-cols-4 gap-6 mb-6">
-            <div className="stat-card">
-              <div className="flex items-center gap-2 mb-2">
-                <BookOpen className="h-5 w-5 text-blue-600" />
-                <h3 className="font-semibold">Lessons</h3>
-              </div>
-              <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                {stats.lessonsCompleted}
-              </p>
-            </div>
-            <div className="stat-card">
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="h-5 w-5 text-blue-600" />
-                <h3 className="font-semibold">Time Spent</h3>
-              </div>
-              <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                {stats.timeSpent}
-              </p>
-            </div>
-            <div className="stat-card">
-              <div className="flex items-center gap-2 mb-2">
-                <BrainCircuit className="h-5 w-5 text-blue-600" />
-                <h3 className="font-semibold">Accuracy</h3>
-              </div>
-              <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                {stats.accuracyRate}
-              </p>
-            </div>
-            <div className="stat-card">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-5 w-5 text-blue-600" />
-                <h3 className="font-semibold">Common Errors</h3>
-              </div>
-              <p className="text-sm text-blue-600">{stats.commonErrors.join(", ")}</p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            onClick={handleEmailProgress}
-            className="w-full hover:bg-blue-50 transition-all duration-300"
-          >
-            <Send className="mr-2 h-4 w-4" />
-            Email My Progress
           </Button>
         </div>
       </div>

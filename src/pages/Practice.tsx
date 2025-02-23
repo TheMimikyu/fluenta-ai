@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, User } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
 
@@ -38,19 +38,38 @@ const Practice = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white/80 backdrop-blur-sm shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <span className="text-blue-600 font-bold text-2xl">Fluenta AI</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">{user?.email}</span>
+            <div className="flex items-center space-x-4">
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-600"
+                onClick={() => navigate(-1)}
+              >
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Back
+              </Button>
+              <span className="text-blue-600 font-bold text-2xl">Practice</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/quiz")}
+              >
+                Quiz
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/tracking")}
+              >
+                Progress
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleSignOut}
               >
                 Sign Out
