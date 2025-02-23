@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const useConversationAI = () => {
   const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'disconnected'>('idle');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
   const { toast } = useToast();
 
   const startConversation = useCallback(async (scenario: string, language: string, difficulty: string, nativeLanguage: string) => {
@@ -14,7 +15,7 @@ export const useConversationAI = () => {
       
       // First, request microphone access
       console.log('Requesting microphone access...');
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       console.log('Microphone access granted');
 
       // Get current session
@@ -52,16 +53,63 @@ export const useConversationAI = () => {
         throw new Error('No conversation URL received');
       }
 
-      // Initialize conversation
-      console.log('Setting status to connecting...');
+      // Initialize WebSocket connection
+      console.log('Connecting to WebSocket...', data.conversation_url);
       setStatus('connecting');
       
-      // TODO: Implement WebSocket connection and audio handling
-      // This will be added in the next iteration when the user confirms the initial setup works
-      console.log('Received conversation URL:', data.conversation_url);
-
-      setStatus('connected');
+      const ws = new WebSocket(data.conversation_url);
       
+      // Set up WebSocket event handlers
+      ws.onopen = () => {
+        console.log('WebSocket connection established');
+        setStatus('connected');
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket connection closed');
+        setStatus('disconnected');
+        setSocket(null);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        toast({
+          title: 'Connection Error',
+          description: 'Failed to connect to conversation service.',
+          variant: 'destructive',
+        });
+        setStatus('disconnected');
+      };
+
+      ws.onmessage = async (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          console.log('Received message:', message);
+
+          if (message.type === 'speech_start') {
+            setIsSpeaking(true);
+          } else if (message.type === 'speech_end') {
+            setIsSpeaking(false);
+          }
+          // Handle other message types as needed
+        } catch (error) {
+          console.error('Error handling message:', error);
+        }
+      };
+
+      setSocket(ws);
+
+      // Set up audio streaming
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = (event) => {
+        if (ws.readyState === WebSocket.OPEN && event.data.size > 0) {
+          ws.send(event.data);
+        }
+      };
+
+      // Start recording
+      mediaRecorder.start(100); // Send audio data every 100ms
+
       return data.conversation_url;
     } catch (error) {
       console.error('Error starting conversation:', error);
@@ -77,17 +125,20 @@ export const useConversationAI = () => {
 
   const endConversation = useCallback(() => {
     console.log('Ending conversation...');
+    if (socket) {
+      socket.close();
+    }
     setStatus('disconnected');
-    // TODO: Implement cleanup logic
-  }, []);
+    setSocket(null);
+  }, [socket]);
 
   useEffect(() => {
     return () => {
-      if (status === 'connected') {
-        endConversation();
+      if (socket) {
+        socket.close();
       }
     };
-  }, [status, endConversation]);
+  }, [socket]);
 
   return {
     status,
