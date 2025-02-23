@@ -63,8 +63,10 @@ serve(async (req) => {
       while (attempts < maxAttempts && !imageUrl) {
         console.log(`Polling attempt ${attempts + 1} for request ID: ${result.request_id}`);
         const pollResponse = await fetch(pollUrl, {
+          method: "GET", // Explicitly set method to GET for polling
           headers: {
             "Authorization": `Key ${FAL_KEY}`,
+            "Content-Type": "application/json",
           },
         });
 
