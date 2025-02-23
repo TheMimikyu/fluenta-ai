@@ -36,6 +36,22 @@ export const useConversationAI = () => {
         throw new Error('No active session');
       }
 
+      // Get user's profile data
+      console.log('Getting user profile...');
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        throw new Error('Failed to fetch user profile');
+      }
+
+      const userName = profile?.full_name || 'Student';
+      console.log('Using user name:', userName);
+
       // Get conversation URL from our edge function
       console.log('Calling get-conversation-url function...');
       const { data, error } = await supabase.functions.invoke('get-conversation-url', {
@@ -115,7 +131,8 @@ export const useConversationAI = () => {
                   threshold: 0.5,
                   prefix_padding_ms: 300,
                   silence_duration_ms: 1000
-                }
+                },
+                user_name: userName
               }
             }));
 
