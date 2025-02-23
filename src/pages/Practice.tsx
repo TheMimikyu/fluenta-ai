@@ -1,19 +1,12 @@
 
 import { useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Loader2, ArrowLeft, Play, Minimize2 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { PracticeNav } from "@/components/practice/PracticeNav";
+import { PracticeForm } from "@/components/practice/PracticeForm";
+import { ImageViewer } from "@/components/practice/ImageViewer";
 
 const Practice = () => {
   const [targetLanguage, setTargetLanguage] = useState("");
@@ -91,201 +84,44 @@ const Practice = () => {
     }
   };
 
-  const toggleFullScreen = () => {
-    setIsFullScreen(!isFullScreen);
+  const handleStartConversation = () => {
+    console.log("Starting conversation...");
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      <nav className="bg-white/80 backdrop-blur-sm shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate(-1)}
-              >
-                <ArrowLeft className="h-5 w-5 mr-2" />
-                Back
-              </Button>
-              <span className="text-blue-600 font-bold text-2xl">Practice</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/quiz")}
-              >
-                Quiz
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/tracking")}
-              >
-                Progress
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSignOut}
-              >
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <PracticeNav onSignOut={handleSignOut} />
 
       {isFullScreen && generatedImage ? (
-        <div className="fixed inset-0 z-50 bg-black">
-          <div className="absolute top-4 right-4 z-50">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={toggleFullScreen}
-              className="bg-white/10 hover:bg-white/20 text-white border-white/20"
-            >
-              <Minimize2 className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="relative h-full">
-            <img
-              src={generatedImage}
-              alt="Generated scenario"
-              className="absolute inset-0 w-full h-full object-contain"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Button
-                size="lg"
-                className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-full text-lg font-semibold transition-all duration-200 hover:transform hover:scale-105 flex items-center gap-2"
-                onClick={() => {
-                  console.log("Starting conversation...");
-                }}
-              >
-                <Play className="h-5 w-5" />
-                Start Conversation
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ImageViewer
+          imageUrl={generatedImage}
+          isFullScreen={isFullScreen}
+          onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
+          onStartConversation={handleStartConversation}
+        />
       ) : (
         <div className="container mx-auto p-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-sm p-8 animate-in">
-              <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-                Language Practice
-              </h1>
-
-              <div className="grid md:grid-cols-2 gap-6 mb-8">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Native Language
-                  </label>
-                  <Select onValueChange={setNativeLanguage}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your native language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="hi">Hindi</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="fr">French</SelectItem>
-                      <SelectItem value="de">German</SelectItem>
-                      <SelectItem value="es">Spanish</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Target Language
-                  </label>
-                  <Select onValueChange={setTargetLanguage}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select target language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="hi">Hindi</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="fr">French</SelectItem>
-                      <SelectItem value="de">German</SelectItem>
-                      <SelectItem value="es">Spanish</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Scenario
-                  </label>
-                  <Input
-                    placeholder="Type scenario (e.g., job interview)"
-                    value={scenario}
-                    onChange={(e) => setScenario(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Difficulty
-                  </label>
-                  <Select onValueChange={setDifficulty}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select difficulty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="beginner">Beginner</SelectItem>
-                      <SelectItem value="intermediate">Intermediate</SelectItem>
-                      <SelectItem value="advanced">Advanced</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="text-center">
-                <Button
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 rounded-full text-lg font-semibold transition-all duration-200 hover:transform hover:scale-105"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    "Generate Scenario"
-                  )}
-                </Button>
-              </div>
-
-              {generatedImage && !isFullScreen && (
-                <div className="mt-8">
-                  <div className="relative rounded-xl overflow-hidden h-[400px]">
-                    <img
-                      src={generatedImage}
-                      alt="Generated scenario"
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                    
-                    <div className="absolute inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center">
-                      <Button
-                        size="lg"
-                        className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-full text-lg font-semibold transition-all duration-200 hover:transform hover:scale-105 flex items-center gap-2"
-                        onClick={() => {
-                          console.log("Starting conversation...");
-                        }}
-                      >
-                        <Play className="h-5 w-5" />
-                        Start Conversation
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <PracticeForm
+            scenario={scenario}
+            onScenarioChange={setScenario}
+            nativeLanguage={nativeLanguage}
+            onNativeLanguageChange={setNativeLanguage}
+            targetLanguage={targetLanguage}
+            onTargetLanguageChange={setTargetLanguage}
+            difficulty={difficulty}
+            onDifficultyChange={setDifficulty}
+            onGenerate={handleGenerate}
+            isGenerating={isGenerating}
+          />
+          
+          {generatedImage && (
+            <ImageViewer
+              imageUrl={generatedImage}
+              isFullScreen={false}
+              onToggleFullScreen={() => setIsFullScreen(true)}
+              onStartConversation={handleStartConversation}
+            />
+          )}
         </div>
       )}
     </div>
