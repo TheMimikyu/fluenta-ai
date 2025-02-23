@@ -73,7 +73,7 @@ serve(async (req) => {
       );
     }
 
-    // Make request to FAL API
+    // Make initial request to FAL API
     console.log("Making request to FAL API with scenario:", scenario);
     const falResponse = await fetch(FAL_API_URL, {
       method: "POST",
@@ -123,16 +123,43 @@ serve(async (req) => {
     const maxAttempts = 30;
 
     while (attempts < maxAttempts && !imageUrl) {
-      console.log(`Polling attempt ${attempts + 1}`);
+      console.log(`Polling attempt ${attempts + 1} for request ID: ${falData.request_id}`);
       const pollResponse = await fetch(`${FAL_API_URL}/${falData.request_id}`, {
+        method: "GET", // Explicitly set method to GET for polling
         headers: {
           "Authorization": `Key ${FAL_KEY}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (!pollResponse.ok) {
         const errorText = await pollResponse.text();
-        console.error("Polling error:", errorText);
+        console.error(`Polling error on attempt ${attempts + 1}:`, errorText);
+        
+        // If we get a 405, let's try with POST method
+        if (pollResponse.status === 405) {
+          console.log("Received 405, trying with POST method...");
+          const postPollResponse = await fetch(`${FAL_API_URL}/${falData.request_id}`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Key ${FAL_KEY}`,
+              "Content-Type": "application/json",
+            },
+          });
+          
+          if (postPollResponse.ok) {
+            const postPollData = await postPollResponse.json();
+            console.log("POST poll response:", postPollData);
+            
+            if (postPollData.status === "completed" && postPollData.image?.url) {
+              imageUrl = postPollData.image.url;
+              break;
+            }
+          } else {
+            console.error("POST polling also failed:", await postPollResponse.text());
+          }
+        }
+        attempts++;
         continue;
       }
 
