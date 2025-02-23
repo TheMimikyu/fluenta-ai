@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const FAL_KEY = Deno.env.get("FAL_KEY");
-const FAL_API_URL = "https://api.fal.ai/api/v1/lora/flux/stability";
+const FAL_API_URL = "https://queue.fal.run/fal-ai/flux-lora";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -27,6 +27,7 @@ serve(async (req) => {
 
     console.log("Starting image generation for scenario:", scenario);
     
+    // Initial request to start image generation
     const response = await fetch(FAL_API_URL, {
       method: "POST",
       headers: {
@@ -43,10 +44,50 @@ serve(async (req) => {
     }
 
     const result = await response.json();
+    console.log("Initial response:", result);
+
+    if (!result.request_id) {
+      throw new Error('No request ID received from FAL AI');
+    }
+
+    // Poll for the result using the request ID
+    const pollUrl = `${FAL_API_URL}/${result.request_id}`;
+    let imageUrl = null;
+    let attempts = 0;
+    const maxAttempts = 30;
+
+    while (attempts < maxAttempts && !imageUrl) {
+      console.log(`Polling attempt ${attempts + 1}...`);
+      const pollResponse = await fetch(pollUrl, {
+        headers: {
+          "Authorization": `Key ${FAL_KEY}`,
+        },
+      });
+
+      if (!pollResponse.ok) {
+        throw new Error(`Error polling result: ${pollResponse.statusText}`);
+      }
+
+      const pollResult = await pollResponse.json();
+      console.log("Poll result:", pollResult);
+
+      if (pollResult.status === "completed" && pollResult.image?.url) {
+        imageUrl = pollResult.image.url;
+        break;
+      }
+
+      // Wait 1 second before next poll
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      attempts++;
+    }
+
+    if (!imageUrl) {
+      throw new Error('Image generation timed out or failed');
+    }
 
     return new Response(
       JSON.stringify({ 
-        imageUrl: result.images?.[0]?.url || result.image?.url,
+        imageUrl,
         success: true 
       }),
       { 
