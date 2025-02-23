@@ -57,14 +57,12 @@ const Practice = () => {
 
       console.log("Starting function invocation with payload:", { scenario });
       
+      // Important: Pass a proper object as body and set method to POST
       const { data: functionData, error: functionError } = await supabase.functions.invoke(
         'generate-image',
         {
-          body: JSON.stringify({ scenario }),
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
+          method: 'POST', // Explicitly set method to POST
+          body: { scenario }, // Pass object directly, supabase.functions.invoke will handle stringification
         }
       );
 
@@ -186,6 +184,7 @@ const Practice = () => {
                 </label>
                 <Input
                   placeholder="Type scenario (e.g., job interview)"
+                  value={scenario}
                   onChange={(e) => setScenario(e.target.value)}
                 />
               </div>
@@ -224,24 +223,20 @@ const Practice = () => {
               </Button>
             </div>
 
-            {/* Generated Scene Visualization */}
             {generatedImage && (
               <div className="mt-8">
                 <div className="relative rounded-xl overflow-hidden h-[400px]">
-                  {/* Background Image */}
                   <img
                     src={generatedImage}
                     alt="Generated scenario"
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                   
-                  {/* Overlay with Start Button */}
                   <div className="absolute inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center">
                     <Button
                       size="lg"
                       className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-full text-lg font-semibold transition-all duration-200 hover:transform hover:scale-105 flex items-center gap-2"
                       onClick={() => {
-                        // TODO: Implement conversation start logic
                         console.log("Starting conversation...");
                       }}
                     >
