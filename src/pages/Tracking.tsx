@@ -33,7 +33,8 @@ const Tracking = () => {
       try {
         const { data, error } = await supabase
           .from('conversation_metrics')
-          .select('*') as { data: ConversationMetrics[] | null, error: any };
+          .select('*')
+          .returns<ConversationMetrics[]>();
 
         if (error) throw error;
 
