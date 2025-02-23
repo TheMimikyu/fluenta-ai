@@ -1,5 +1,5 @@
 
-import { serve } from "https://deno.fresh.dev/std@v1/http/server.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // Using the ESM URL for fal-ai
 import { fal } from "https://esm.sh/@fal-ai/serverless-client@1.2.3";
 import { corsHeaders } from "../_shared/cors.ts";
