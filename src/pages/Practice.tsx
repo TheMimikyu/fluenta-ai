@@ -9,9 +9,11 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Play } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
+import { fal } from "@fal-ai/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const Practice = () => {
   const [targetLanguage, setTargetLanguage] = useState("");
@@ -19,8 +21,10 @@ const Practice = () => {
   const [scenario, setScenario] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string>("");
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSignOut = async () => {
     try {
@@ -32,9 +36,42 @@ const Practice = () => {
   };
 
   const handleGenerate = async () => {
+    if (!scenario) {
+      toast({
+        title: "Error",
+        description: "Please enter a scenario",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
-    // TODO: Implement generation logic
-    setTimeout(() => setIsGenerating(false), 2000);
+    try {
+      const result = await fal.subscribe("fal-ai/flux-lora", {
+        input: {
+          prompt: `Realistic scene of ${scenario}, photographic style, detailed environment, natural lighting`,
+        },
+        logs: true,
+        onQueueUpdate: (update) => {
+          if (update.status === "IN_PROGRESS") {
+            update.logs.map((log) => log.message).forEach(console.log);
+          }
+        },
+      });
+
+      if (result.data.images?.[0]?.url) {
+        setGeneratedImage(result.data.images[0].url);
+      }
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -168,30 +205,34 @@ const Practice = () => {
               </Button>
             </div>
 
-            {/* Generated content with scene visualization as background */}
-            <div className="mt-8">
-              <div className="relative bg-gray-50 rounded-xl overflow-hidden">
-                {/* Scene Visualization (Background) */}
-                <div className="absolute inset-0 bg-cover bg-center opacity-20" />
-                
-                {/* Content */}
-                <div className="relative z-10">
-                  <div className="p-6 backdrop-blur-sm bg-white/30">
-                    <h2 className="text-xl font-semibold mb-4">Generated Dialogue</h2>
-                    <div className="min-h-40 flex items-center justify-center text-gray-500">
-                      Your dialogue will appear here
-                    </div>
-                  </div>
+            {/* Generated Scene Visualization */}
+            {generatedImage && (
+              <div className="mt-8">
+                <div className="relative rounded-xl overflow-hidden h-[400px]">
+                  {/* Background Image */}
+                  <img
+                    src={generatedImage}
+                    alt="Generated scenario"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
                   
-                  <div className="p-6 backdrop-blur-sm bg-white/30 border-t border-white/20">
-                    <h2 className="text-xl font-semibold mb-4">Audio Playback</h2>
-                    <div className="h-20 flex items-center justify-center text-gray-500">
-                      Audio controls will appear here
-                    </div>
+                  {/* Overlay with Start Button */}
+                  <div className="absolute inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center">
+                    <Button
+                      size="lg"
+                      className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-full text-lg font-semibold transition-all duration-200 hover:transform hover:scale-105 flex items-center gap-2"
+                      onClick={() => {
+                        // TODO: Implement conversation start logic
+                        console.log("Starting conversation...");
+                      }}
+                    >
+                      <Play className="h-5 w-5" />
+                      Start Conversation
+                    </Button>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
