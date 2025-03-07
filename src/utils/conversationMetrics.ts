@@ -4,13 +4,6 @@ import type { Database } from "@/types/database";
 
 type ConversationMetrics = Database['public']['Tables']['conversation_metrics']['Insert'];
 
-interface ElevenLabsMetrics {
-  detected_errors: string;
-  pronunciation_score: number;
-  correction_attempts: number;
-  transcript: string;
-}
-
 export async function saveConversationMetrics(conversationId: string) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -25,18 +18,20 @@ export async function saveConversationMetrics(conversationId: string) {
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API response error (${response.status}):`, errorText);
       throw new Error(`Failed to fetch conversation data: ${response.status}`);
     }
 
     const data = await response.json();
     console.log("Received conversation data:", data);
     
-    // Extract required metrics
-    const detected_errors = data.analysis.data_collection_results.detected_errors?.value || "";
-    const pronunciation_score = data.analysis.data_collection_results.pronunciation_score?.value || 0;
-    const correction_attempts = data.analysis.data_collection_results.correction_attempts?.value || 0;
-    const duration_seconds = data.metadata.call_duration_secs || 0;
-    const transcript_summary = data.analysis.transcript_summary || "";
+    // Extract required metrics - handle potential undefined values safely
+    const detected_errors = data.analysis?.data_collection_results?.detected_errors?.value || "";
+    const pronunciation_score = parseFloat(data.analysis?.data_collection_results?.pronunciation_score?.value || 0);
+    const correction_attempts = parseInt(data.analysis?.data_collection_results?.correction_attempts?.value || 0);
+    const duration_seconds = data.metadata?.call_duration_secs || 0;
+    const transcript_summary = data.analysis?.transcript_summary || "";
 
     // Prepare metrics for storage
     const metrics: ConversationMetrics = {
@@ -56,7 +51,10 @@ export async function saveConversationMetrics(conversationId: string) {
       .from('conversation_metrics')
       .insert(metrics);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database error when saving metrics:', error);
+      throw error;
+    }
     
     console.log("Metrics saved successfully");
     return { success: true, metrics };

@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Loader2, Minimize2, Play, Square } from "lucide-react";
 import { useConversationAI } from "@/hooks/useConversationAI";
+import { useEffect } from "react";
 
 interface ImageViewerProps {
   imageUrl: string;
@@ -22,15 +23,23 @@ export const ImageViewer = ({
   difficulty,
   nativeLanguage,
 }: ImageViewerProps) => {
-  const { status, startConversation, endConversation } = useConversationAI();
+  const { status, isSpeaking, conversationId, startConversation, endConversation } = useConversationAI();
 
   const handleStartConversation = async () => {
     try {
+      console.log("Starting conversation...");
       await startConversation(scenario, targetLanguage, difficulty, nativeLanguage);
     } catch (error) {
       console.error('Failed to start conversation:', error);
     }
   };
+
+  // Log when conversation ID is available
+  useEffect(() => {
+    if (conversationId) {
+      console.log(`Conversation ID available in component: ${conversationId}`);
+    }
+  }, [conversationId]);
 
   const isActive = status === 'connected' || status === 'connecting';
   const isConnecting = status === 'connecting';
@@ -81,6 +90,18 @@ export const ImageViewer = ({
                 <p className="text-white text-lg font-medium">Connecting to conversation service...</p>
               </div>
             )}
+            {isSpeaking && status === 'connected' && (
+              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+                <div className="bg-blue-500/80 text-white px-4 py-2 rounded-full animate-pulse">
+                  AI Speaking...
+                </div>
+              </div>
+            )}
+            {conversationId && status === 'connected' && (
+              <div className="absolute top-6 left-6 text-xs bg-white/20 text-white/80 px-2 py-1 rounded">
+                Conversation ID: {conversationId}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -115,6 +136,11 @@ export const ImageViewer = ({
                 </>
               )}
             </Button>
+          )}
+          {conversationId && status === 'connected' && (
+            <div className="absolute top-2 left-2 text-xs bg-white/20 text-white/80 px-2 py-1 rounded">
+              Conversation active
+            </div>
           )}
         </div>
       </div>

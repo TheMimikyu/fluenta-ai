@@ -131,6 +131,8 @@ export const useConversationAI = () => {
                 variant: 'destructive',
               });
             }
+          } else {
+            console.error('No conversation ID available for saving metrics');
           }
         },
         onError: (error) => {
@@ -144,11 +146,19 @@ export const useConversationAI = () => {
         },
         onMessage: (message: any) => {
           console.log('Received message:', message);
+          
           // Store conversation ID when received
           if (message?.conversation_id && !conversationId) {
             console.log(`Setting conversation ID: ${message.conversation_id}`);
             setConversationId(message.conversation_id);
           }
+          
+          // Special case for Message with 'metadata' that contains conversation_id
+          if (!conversationId && message?.metadata?.conversation_id) {
+            console.log(`Setting conversation ID from metadata: ${message.metadata.conversation_id}`);
+            setConversationId(message.metadata.conversation_id);
+          }
+          
           // Handle speech events
           if (message?.message?.includes('speech_start')) {
             setIsSpeaking(true);
