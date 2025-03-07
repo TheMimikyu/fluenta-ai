@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Minimize2, Play, Square } from "lucide-react";
+import { Loader2, Minimize2, Play, Square } from "lucide-react";
 import { useConversationAI } from "@/hooks/useConversationAI";
 
 interface ImageViewerProps {
@@ -33,6 +33,7 @@ export const ImageViewer = ({
   };
 
   const isActive = status === 'connected' || status === 'connecting';
+  const isConnecting = status === 'connecting';
 
   if (isFullScreen) {
     return (
@@ -74,6 +75,12 @@ export const ImageViewer = ({
                 Start Conversation
               </Button>
             )}
+            {isConnecting && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 backdrop-blur-sm">
+                <Loader2 className="h-8 w-8 text-white animate-spin mb-2" />
+                <p className="text-white text-lg font-medium">Connecting to conversation service...</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -94,9 +101,19 @@ export const ImageViewer = ({
               size="lg"
               className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-full text-lg font-semibold transition-all duration-200 hover:transform hover:scale-105 flex items-center gap-2"
               onClick={handleStartConversation}
+              disabled={isConnecting}
             >
-              <Play className="h-5 w-5" />
-              Start Conversation
+              {isConnecting ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Play className="h-5 w-5" />
+                  Start Conversation
+                </>
+              )}
             </Button>
           )}
         </div>

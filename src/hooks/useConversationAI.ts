@@ -29,16 +29,25 @@ export const useConversationAI = () => {
       });
       console.log('Microphone access granted');
 
+      // Set status to connecting early to show UI feedback
+      setStatus('connecting');
+
       // Get current session
       console.log('Getting current session...');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Session result:', { session, error: sessionError });
       
-      if (sessionError || !session) {
-        console.error('No active session:', sessionError);
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error(`Session error: ${sessionError.message}`);
+      }
+      
+      if (!session) {
+        console.error('No active session found');
         throw new Error('No active session');
       }
-
+      
+      console.log('Session retrieved successfully');
+      
       // Get user's profile data
       console.log('Getting user profile...');
       const { data: profile, error: profileError } = await supabase
@@ -49,7 +58,7 @@ export const useConversationAI = () => {
 
       if (profileError) {
         console.error('Error fetching user profile:', profileError);
-        throw new Error('Failed to fetch user profile');
+        throw new Error(`Failed to fetch user profile: ${profileError.message}`);
       }
 
       const userName = profile?.full_name || 'Student';
@@ -68,12 +77,13 @@ export const useConversationAI = () => {
           Authorization: `Bearer ${session.access_token}`,
         }
       });
-      console.log('Edge function response:', { data, error });
-
+      
       if (error) {
         console.error('Edge function error:', error);
-        throw error;
+        throw new Error(`Edge function error: ${error.message || JSON.stringify(error)}`);
       }
+      
+      console.log('Edge function response:', data);
       
       if (!data?.agent_id) {
         console.error('No agent ID in response:', data);
@@ -81,7 +91,7 @@ export const useConversationAI = () => {
       }
 
       // Initialize conversation using @11labs/client
-      console.log('Initializing conversation...');
+      console.log('Initializing conversation with agent ID:', data.agent_id);
       const conv = await Conversation.startSession({
         agentId: data.agent_id,
         dynamicVariables: {
@@ -94,6 +104,10 @@ export const useConversationAI = () => {
         onConnect: () => {
           console.log('Conversation connected');
           setStatus('connected');
+          toast({
+            title: 'Connected',
+            description: 'Conversation started successfully',
+          });
         },
         onDisconnect: async () => {
           console.log('Conversation disconnected');
@@ -144,17 +158,18 @@ export const useConversationAI = () => {
         }
       });
 
+      console.log('Conversation instance created successfully');
       setConversation(conv);
       setStatus('connected');
       return conv;
     } catch (error) {
       console.error('Error starting conversation:', error);
+      setStatus('disconnected');
       toast({
         title: 'Error',
-        description: 'Failed to start conversation. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to start conversation. Please try again.',
         variant: 'destructive',
       });
-      setStatus('disconnected');
       throw error;
     }
   }, [toast, conversationId]);
@@ -171,6 +186,7 @@ export const useConversationAI = () => {
   useEffect(() => {
     return () => {
       if (conversation) {
+        console.log('Component unmounting, cleaning up conversation');
         conversation.endSession();
       }
     };
