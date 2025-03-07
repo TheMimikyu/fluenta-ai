@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -102,9 +103,19 @@ export const useConversationAI = () => {
           // Save metrics when conversation ends
           if (conversationId) {
             try {
+              console.log(`Conversation ended, saving metrics for ID: ${conversationId}`);
               await saveConversationMetrics(conversationId);
+              toast({
+                title: 'Progress Updated',
+                description: 'Your conversation metrics have been saved',
+              });
             } catch (error) {
               console.error('Error saving metrics:', error);
+              toast({
+                title: 'Error',
+                description: 'Failed to save conversation metrics',
+                variant: 'destructive',
+              });
             }
           }
         },
@@ -121,6 +132,7 @@ export const useConversationAI = () => {
           console.log('Received message:', message);
           // Store conversation ID when received
           if (message?.conversation_id && !conversationId) {
+            console.log(`Setting conversation ID: ${message.conversation_id}`);
             setConversationId(message.conversation_id);
           }
           // Handle speech events
@@ -167,6 +179,7 @@ export const useConversationAI = () => {
   return {
     status,
     isSpeaking,
+    conversationId,
     startConversation,
     endConversation,
   };

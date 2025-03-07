@@ -8,7 +8,8 @@ import {
   BrainCircuit, 
   AlertTriangle,
   Send,
-  ArrowLeft
+  ArrowLeft,
+  FileText
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/ui/use-toast";
@@ -21,6 +22,7 @@ const Tracking = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const [metrics, setMetrics] = useState<ConversationMetrics[]>([]);
   const [stats, setStats] = useState({
     lessonsCompleted: 0,
     timeSpent: "0h 0m",
@@ -39,6 +41,8 @@ const Tracking = () => {
         if (error) throw error;
 
         if (data && data.length > 0) {
+          setMetrics(data);
+          
           // Calculate total lessons
           const lessonsCompleted = data.length;
 
@@ -170,11 +174,47 @@ const Tracking = () => {
           <Button
             variant="outline"
             onClick={handleEmailProgress}
-            className="w-full hover:bg-blue-50 transition-all duration-300"
+            className="w-full hover:bg-blue-50 transition-all duration-300 mb-8"
           >
             <Send className="mr-2 h-4 w-4" />
             Email My Progress
           </Button>
+
+          {/* Add conversation transcripts section */}
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Recent Conversations</h3>
+          <div className="space-y-4">
+            {metrics.length > 0 ? (
+              metrics.slice(0, 5).map((metric) => (
+                <div key={metric.id} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-start gap-3">
+                    <FileText className="h-5 w-5 text-blue-600 mt-1" />
+                    <div className="flex-1">
+                      <div className="flex justify-between mb-2">
+                        <p className="text-sm font-medium">
+                          {new Date(metric.created_at).toLocaleDateString()} • {Math.floor((metric.duration_seconds || 0) / 60)}m {(metric.duration_seconds || 0) % 60}s
+                        </p>
+                        <p className="text-sm font-medium text-blue-600">
+                          Score: {metric.pronunciation_score || 0}%
+                        </p>
+                      </div>
+                      <p className="text-sm text-gray-700 line-clamp-3">
+                        {metric.transcript_summary || "No transcript available"}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {metric.detected_errors && metric.detected_errors.split(',').map((error, i) => (
+                          <span key={i} className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded-full">
+                            {error.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-4">No conversation data available yet</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

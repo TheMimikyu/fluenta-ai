@@ -48,6 +48,7 @@ export interface Database {
           pronunciation_score: number | null;
           correction_attempts: number | null;
           duration_seconds: number | null;
+          transcript_summary: string | null;
           created_at: string;
         };
         Insert: {
@@ -58,6 +59,7 @@ export interface Database {
           pronunciation_score?: number | null;
           correction_attempts?: number | null;
           duration_seconds?: number | null;
+          transcript_summary?: string | null;
           created_at?: string;
         };
         Update: {
@@ -68,6 +70,7 @@ export interface Database {
           pronunciation_score?: number | null;
           correction_attempts?: number | null;
           duration_seconds?: number | null;
+          transcript_summary?: string | null;
           created_at?: string;
         };
       };
