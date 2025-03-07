@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Loader2, Minimize2, Play, Square } from "lucide-react";
 import { useConversationAI } from "@/hooks/useConversationAI";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface ImageViewerProps {
   imageUrl: string;
@@ -23,7 +23,8 @@ export const ImageViewer = ({
   difficulty,
   nativeLanguage,
 }: ImageViewerProps) => {
-  const { status, isSpeaking, conversationId, startConversation, endConversation } = useConversationAI();
+  const { status, isSpeaking, conversationId, messages, startConversation, endConversation } = useConversationAI();
+  const [lastMessage, setLastMessage] = useState<string>("");
 
   const handleStartConversation = async () => {
     try {
@@ -40,6 +41,13 @@ export const ImageViewer = ({
       console.log(`Conversation ID available in component: ${conversationId}`);
     }
   }, [conversationId]);
+
+  // Update last message when messages change
+  useEffect(() => {
+    if (messages.length > 0 && messages[messages.length - 1].source === 'ai') {
+      setLastMessage(messages[messages.length - 1].text);
+    }
+  }, [messages]);
 
   const isActive = status === 'connected' || status === 'connecting';
   const isConnecting = status === 'connecting';
@@ -97,9 +105,16 @@ export const ImageViewer = ({
                 </div>
               </div>
             )}
+            {lastMessage && status === 'connected' && (
+              <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 w-3/4 max-w-md">
+                <div className="bg-gray-900/80 text-white px-4 py-3 rounded-lg backdrop-blur-sm">
+                  {lastMessage}
+                </div>
+              </div>
+            )}
             {conversationId && status === 'connected' && (
-              <div className="absolute top-6 left-6 text-xs bg-white/20 text-white/80 px-2 py-1 rounded">
-                Conversation ID: {conversationId}
+              <div className="absolute top-6 left-6 bg-white/20 text-white/80 px-2 py-1 rounded text-xs">
+                ID: {conversationId}
               </div>
             )}
           </div>
@@ -139,7 +154,7 @@ export const ImageViewer = ({
           )}
           {conversationId && status === 'connected' && (
             <div className="absolute top-2 left-2 text-xs bg-white/20 text-white/80 px-2 py-1 rounded">
-              Conversation active
+              Conversation active (ID: {conversationId})
             </div>
           )}
         </div>

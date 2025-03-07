@@ -10,6 +10,7 @@ export const useConversationAI = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Array<{ text: string, source: 'user' | 'ai' }>>([]);
   const { toast } = useToast();
 
   const startConversation = useCallback(async (scenario: string, language: string, difficulty: string, nativeLanguage: string) => {
@@ -133,6 +134,30 @@ export const useConversationAI = () => {
             }
           } else {
             console.error('No conversation ID available for saving metrics');
+            
+            // Try to retrieve conversation ID from accumulated messages
+            const potentialIds = messages
+              .filter(msg => msg.source === 'ai')
+              .map(msg => {
+                // Try to extract conversation ID from message text
+                const match = msg.text?.match(/conversation_id["|:]?\s*["']?([a-zA-Z0-9-_]+)["']?/i);
+                return match ? match[1] : null;
+              })
+              .filter(Boolean);
+            
+            if (potentialIds.length > 0) {
+              const foundId = potentialIds[0];
+              console.log(`Found conversation ID from messages: ${foundId}`);
+              try {
+                await saveConversationMetrics(foundId);
+                toast({
+                  title: 'Progress Updated',
+                  description: 'Your conversation metrics have been saved',
+                });
+              } catch (error) {
+                console.error('Error saving metrics with extracted ID:', error);
+              }
+            }
           }
         },
         onError: (error) => {
@@ -147,16 +172,43 @@ export const useConversationAI = () => {
         onMessage: (message: any) => {
           console.log('Received message:', message);
           
-          // Store conversation ID when received
-          if (message?.conversation_id && !conversationId) {
-            console.log(`Setting conversation ID: ${message.conversation_id}`);
-            setConversationId(message.conversation_id);
+          // Store message for potential ID extraction later
+          if (message?.message) {
+            setMessages(prev => [...prev, { 
+              text: message.message, 
+              source: message.source || 'ai' 
+            }]);
           }
           
-          // Special case for Message with 'metadata' that contains conversation_id
-          if (!conversationId && message?.metadata?.conversation_id) {
+          // Extract conversation_id from various message formats
+          if (message?.conversation_id) {
+            console.log(`Setting conversation ID from conversation_id field: ${message.conversation_id}`);
+            setConversationId(message.conversation_id);
+          } 
+          else if (message?.metadata?.conversation_id) {
             console.log(`Setting conversation ID from metadata: ${message.metadata.conversation_id}`);
             setConversationId(message.metadata.conversation_id);
+          }
+          else if (message?.message && typeof message.message === 'string') {
+            // Try to extract ID from message text
+            const match = message.message.match(/conversation_id["|:]?\s*["']?([a-zA-Z0-9-_]+)["']?/i);
+            if (match && match[1]) {
+              console.log(`Extracted conversation ID from message text: ${match[1]}`);
+              setConversationId(match[1]);
+            }
+
+            // Also look for ID in object format if message might be JSON
+            try {
+              if (message.message.includes('{') && message.message.includes('}')) {
+                const jsonMatch = JSON.parse(message.message);
+                if (jsonMatch?.conversation_id) {
+                  console.log(`Extracted conversation ID from JSON in message: ${jsonMatch.conversation_id}`);
+                  setConversationId(jsonMatch.conversation_id);
+                }
+              }
+            } catch (e) {
+              // Ignore parsing errors
+            }
           }
           
           // Handle speech events
@@ -182,7 +234,7 @@ export const useConversationAI = () => {
       });
       throw error;
     }
-  }, [toast, conversationId]);
+  }, [toast, conversationId, messages]);
 
   const endConversation = useCallback(() => {
     console.log('Ending conversation...');
@@ -206,6 +258,7 @@ export const useConversationAI = () => {
     status,
     isSpeaking,
     conversationId,
+    messages,
     startConversation,
     endConversation,
   };

@@ -31,7 +31,21 @@ export async function saveConversationMetrics(conversationId: string) {
     const pronunciation_score = parseFloat(data.analysis?.data_collection_results?.pronunciation_score?.value || 0);
     const correction_attempts = parseInt(data.analysis?.data_collection_results?.correction_attempts?.value || 0);
     const duration_seconds = data.metadata?.call_duration_secs || 0;
-    const transcript_summary = data.analysis?.transcript_summary || "";
+    
+    // Get transcript summary, handling potential undefined values
+    let transcript_summary = "";
+    try {
+      if (data.analysis?.transcript_summary) {
+        transcript_summary = data.analysis.transcript_summary;
+      } else if (data.dialogue && Array.isArray(data.dialogue)) {
+        // If no summary, try to create one from dialogue array
+        transcript_summary = data.dialogue
+          .map(entry => `${entry.role}: ${entry.text}`)
+          .join('\n');
+      }
+    } catch (error) {
+      console.warn('Error extracting transcript summary:', error);
+    }
 
     // Prepare metrics for storage
     const metrics: ConversationMetrics = {
